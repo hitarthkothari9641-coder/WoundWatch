@@ -116,7 +116,9 @@ for f=1:cfg.cv.folds
     va=foldAssignment==f; tr=~va;
     nLow=nnz(Y(tr)=="Low"); nElev=nnz(Y(tr)=="Elevated");
     classWeights=single([nnz(tr)/(2*nLow),nnz(tr)/(2*nElev)]);
-    lossFcn=dlaccelerate(@(P,Targ)crossentropy(P,Targ,classWeights));
+    % Use the direct differentiable loss handle. dlaccelerate is optional and
+    % can contact MATLAB acceleration services that are unavailable on some installs.
+    lossFcn=@(P,Targ)crossentropy(P,Targ,classWeights);
     net=imagePretrainedNetwork(backbone,NumClasses=2);
     augmenter=imageDataAugmenter( ...
         RandRotation=cfg.augmentation.rotationDegrees, ...
@@ -192,7 +194,7 @@ plotCalibration(oofCalibratedCV,yNumeric,fullfile(cfg.paths.results,"calibration
 %% Train final model on all manifest data and save network plus deployment parameters
 nLow=nnz(Y=="Low"); nElev=nnz(Y=="Elevated");
 finalWeights=single([n/(2*nLow),n/(2*nElev)]);
-finalLoss=dlaccelerate(@(P,Targ)crossentropy(P,Targ,finalWeights));
+finalLoss=@(P,Targ)crossentropy(P,Targ,finalWeights);
 finalNet=imagePretrainedNetwork(backbone,NumClasses=2);
 finalAugmenter=imageDataAugmenter( ...
     RandRotation=cfg.augmentation.rotationDegrees, ...
