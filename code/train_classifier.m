@@ -281,22 +281,84 @@ end
 end
 
 function net=makeLocalClassifierArchitecture(backbone,inputSize)
-% Exact documented local construction for ResNet-18. resnetNetwork was
-% introduced before R2024b and does not retrieve pretrained weights.
+% Assemble a ResNet-18 graph from standard local layers. This avoids both
+% imagePretrainedNetwork and resnetNetwork, including their service calls.
 switch backbone
     case "resnet18"
-        net=resnetNetwork(inputSize,2, ...
-            StackDepth=[2 2 2 2], ...
-            NumFilters=[64 128 256 512], ...
-            BottleneckType="none");
+        net=buildLocalResNet18(inputSize);
     case "resnet50"
-        % The documented default stack depth and bottleneck type define ResNet-50.
-        net=resnetNetwork(inputSize,2);
+        error("WoundWatch:NoLocalArchitectureFallback", ...
+            "The service-independent fallback is implemented for resnet18 only. Set config.models.infectionClassifier to resnet18 or restore pretrained model-service access.");
     otherwise
         error("WoundWatch:NoLocalArchitectureFallback", ...
-            "Offline local architecture fallback is implemented for resnet18 and resnet50, not '%s'. Install the matching model support package or choose resnet18.", ...
+            "Offline local architecture fallback is implemented for resnet18 only, not '%s'. Install the matching model support package or choose resnet18.", ...
             backbone);
 end
+end
+
+function net=buildLocalResNet18(inputSize)
+% Standard 18-layer residual classifier: stem, four two-block stages,
+% global average pooling, two-class fully connected output, and softmax.
+% All learnable layers are initialized by Deep Learning Toolbox locally.
+net=dlnetwork;
+net=addLayers(net,convolution2dLayer(7,64,Stride=2,Padding="same",Name="stem_conv"));
+net=addLayers(net,batchNormalizationLayer(Name="stem_bn"));
+net=addLayers(net,reluLayer(Name="stem_relu"));
+net=addLayers(net,maxPooling2dLayer(3,Stride=2,Padding="same",Name="stem_pool"));
+net=connectLayers(net,"stem_conv","stem_bn");
+net=connectLayers(net,"stem_bn","stem_relu");
+net=connectLayers(net,"stem_relu","stem_pool");
+source="stem_pool";
+inputFilters=64;
+stageFilters=[64 128 256 512];
+for stage=1:4
+    for block=1:2
+        filters=stageFilters(stage);
+        if block==1 && stage>1
+            stride=2;
+        else
+            stride=1;
+        end
+        prefix=sprintf("s%d_b%d",stage,block);
+        conv1=prefix+"_conv1"; bn1=prefix+"_bn1"; relu1=prefix+"_relu1";
+        conv2=prefix+"_conv2"; bn2=prefix+"_bn2"; addName=prefix+"_add";
+        reluOut=prefix+"_out";
+        net=addLayers(net,convolution2dLayer(3,filters,Stride=stride,Padding="same",Name=conv1));
+        net=addLayers(net,batchNormalizationLayer(Name=bn1));
+        net=addLayers(net,reluLayer(Name=relu1));
+        net=addLayers(net,convolution2dLayer(3,filters,Padding="same",Name=conv2));
+        net=addLayers(net,batchNormalizationLayer(Name=bn2));
+        net=addLayers(net,additionLayer(2,Name=addName));
+        net=addLayers(net,reluLayer(Name=reluOut));
+        net=connectLayers(net,source,conv1);
+        net=connectLayers(net,conv1,bn1);
+        net=connectLayers(net,bn1,relu1);
+        net=connectLayers(net,relu1,conv2);
+        net=connectLayers(net,conv2,bn2);
+        net=connectLayers(net,bn2,addName+"/in1");
+        if stride~=1 || inputFilters~=filters
+            skipConv=prefix+"_skip_conv"; skipBN=prefix+"_skip_bn";
+            net=addLayers(net,convolution2dLayer(1,filters,Stride=stride,Name=skipConv));
+            net=addLayers(net,batchNormalizationLayer(Name=skipBN));
+            net=connectLayers(net,source,skipConv);
+            net=connectLayers(net,skipConv,skipBN);
+            net=connectLayers(net,skipBN,addName+"/in2");
+        else
+            net=connectLayers(net,source,addName+"/in2");
+        end
+        net=connectLayers(net,addName,reluOut);
+        source=reluOut;
+        inputFilters=filters;
+    end
+end
+net=addLayers(net,globalAveragePooling2dLayer(Name="gap"));
+net=addLayers(net,fullyConnectedLayer(2,Name="fc"));
+net=addLayers(net,softmaxLayer(Name="probabilities"));
+net=connectLayers(net,source,"gap");
+net=connectLayers(net,"gap","fc");
+net=connectLayers(net,"fc","probabilities");
+net=addInputLayer(net,imageInputLayer(inputSize,Normalization="none",Name="input"),"stem_conv");
+net=initialize(net);
 end
 
 function foldID=stratifiedFoldIDs(Y,nFolds,seed)
