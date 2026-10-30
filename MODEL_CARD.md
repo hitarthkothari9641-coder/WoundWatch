@@ -57,6 +57,13 @@ Preprocessing contract, in order:
    intercept, slope, and threshold must be copied from the exact MATLAB
    `classifier.mat` artifact into service environment variables.
 
+`train_classifier.m` normally uses pretrained weights. If pretrained loading
+fails with MATLAB service error 5006, its configured fallback can initialize
+the architecture without pretrained weights. The script warns about that
+fallback and saves `pretrainedWeightsUsed` in the MAT file. Treat such a run as
+training from scratch and retain that provenance with its metrics; it is a
+different experiment from transfer learning.
+
 The API quality gate mirrors the MATLAB blur, exposure-clipping, and predicted
 wound-area checks. Its Laplacian kernel and thresholds are documented in
 `service/app.py`; verify the gate behavior on representative images before use.

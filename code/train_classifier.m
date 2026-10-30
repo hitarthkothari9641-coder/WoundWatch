@@ -111,6 +111,7 @@ end
 preprocessingEnvironment=string(cfg.training.preprocessingEnvironment);
 fprintf("ExecutionEnvironment=%s; PreprocessingEnvironment=%s; minibatch=%d.\n", ...
     executionEnvironment,preprocessingEnvironment,miniBatch);
+pretrainedWeightsUsed=true;
 
 for f=1:cfg.cv.folds
     va=foldAssignment==f; tr=~va;
@@ -119,7 +120,18 @@ for f=1:cfg.cv.folds
     % Use the direct differentiable loss handle. dlaccelerate is optional and
     % can contact MATLAB acceleration services that are unavailable on some installs.
     lossFcn=@(P,Targ)crossentropy(P,Targ,classWeights);
-    net=imagePretrainedNetwork(backbone,NumClasses=2);
+    if f==1
+        [net,pretrainedWeightsUsed]=makeClassifierNetwork(backbone, ...
+            cfg.training.allowUninitializedBackboneFallback,true);
+        if pretrainedWeightsUsed
+            fprintf("Classifier initialization: pretrained %s weights.\n",backbone);
+        else
+            fprintf("Classifier initialization: uninitialized %s architecture (NO pretrained weights).\n",backbone);
+        end
+    else
+        net=makeClassifierNetwork(backbone, ...
+            cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed);
+    end
     augmenter=imageDataAugmenter( ...
         RandRotation=cfg.augmentation.rotationDegrees, ...
         RandXReflection=cfg.augmentation.horizontalReflection, ...
@@ -195,7 +207,8 @@ plotCalibration(oofCalibratedCV,yNumeric,fullfile(cfg.paths.results,"calibration
 nLow=nnz(Y=="Low"); nElev=nnz(Y=="Elevated");
 finalWeights=single([n/(2*nLow),n/(2*nElev)]);
 finalLoss=@(P,Targ)crossentropy(P,Targ,finalWeights);
-finalNet=imagePretrainedNetwork(backbone,NumClasses=2);
+finalNet=makeClassifierNetwork(backbone, ...
+    cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed);
 finalAugmenter=imageDataAugmenter( ...
     RandRotation=cfg.augmentation.rotationDegrees, ...
     RandXReflection=cfg.augmentation.horizontalReflection, ...
@@ -220,12 +233,51 @@ cvMetrics=struct("AUROC",auroc,"AUROC95CI",aucCI,"AUPRC",auprc, ...
     "ElevatedPrevalence",prevalence,"SensitivityAt90Specificity",sensAt90, ...
     "SpecificityAt90Rule",specAt90,"CrossFittedCalibratedBrier",brierScore);
 save(cfg.paths.infectionClassifierModel,"finalNet","backbone","imageSize", ...
-    "thresholds","calibration","calibrationParameters","finalWeights","cfg","cvMetrics","-v7.3");
+    "thresholds","calibration","calibrationParameters","finalWeights", ...
+    "pretrainedWeightsUsed","cfg","cvMetrics","-v7.3");
 fprintf("\nSaved final classifier: %s\n",cfg.paths.infectionClassifierModel);
 fprintf("Saved OOF CV rows: %s\n",fullfile(cfg.paths.results,"cv_results.csv"));
 fprintf("Saved calibration plot: %s\n",fullfile(cfg.paths.results,"calibration_plot.png"));
 
 %% Local functions
+function [net,pretrainedUsed]=makeClassifierNetwork(backbone,allowFallback,preferPretrained)
+% Prefer pretrained weights; use local architecture-only initialization only
+% after error 5006 and only when the config explicitly allows that fallback.
+if ~preferPretrained
+    if ~allowFallback
+        error("WoundWatch:UninitializedFallbackDisabled", ...
+            "The current run requires uninitialized weights, but the fallback is disabled.");
+    end
+    net=imagePretrainedNetwork(backbone,NumClasses=2,Weights="none");
+    pretrainedUsed=false;
+    return
+end
+try
+    net=imagePretrainedNetwork(backbone,NumClasses=2);
+    pretrainedUsed=true;
+catch ME
+    isService5006=contains(ME.message,"5006");
+    if ~isService5006 || ~allowFallback
+        rethrow(ME);
+    end
+    warning("WoundWatch:PretrainedWeightsUnavailable", ...
+        "MATLAB service error 5006 prevented loading pretrained weights. " + ...
+        "Retrying with Weights=none. This is training from scratch, not " + ...
+        "transfer learning; its performance is not comparable to a pretrained " + ...
+        "run. Install the matching Deep Learning Toolbox Model support package " + ...
+        "and set cfg.training.allowUninitializedBackboneFallback=false when " + ...
+        "you need the intended pretrained experiment.");
+    try
+        net=imagePretrainedNetwork(backbone,NumClasses=2,Weights="none");
+    catch fallbackError
+        error("WoundWatch:NetworkInitializationFailed", ...
+            "Pretrained loading failed with service error 5006 and local uninitialized architecture creation also failed. Pretrained error: %s Local architecture error: %s", ...
+            ME.message,fallbackError.message);
+    end
+    pretrainedUsed=false;
+end
+end
+
 function foldID=stratifiedFoldIDs(Y,nFolds,seed)
 % Deterministic round-robin allocation after shuffling within each class.
 if ~iscategorical(Y) || ~isscalar(nFolds) || nFolds<2 || nFolds~=floor(nFolds)
