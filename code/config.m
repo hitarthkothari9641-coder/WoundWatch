@@ -46,7 +46,8 @@ cfg.training.initialLearnRate = 1e-4;
 cfg.training.validationFraction = 0.2;
 cfg.training.preprocessingEnvironment = "background";
 % If pretrained-weight retrieval fails with MATLAB service error 5006, allow
-% an architecture-only initialization so local training can proceed offline.
+% local ResNet-18 architecture construction with random initialization. Such a
+% run is from scratch and is not equivalent to transfer learning.
 cfg.training.allowUninitializedBackboneFallback = true;
 cfg.augmentation.rotationDegrees = [-15 15];
 cfg.augmentation.translationPixels = [-8 8];

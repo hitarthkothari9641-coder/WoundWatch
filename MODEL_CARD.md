@@ -58,11 +58,15 @@ Preprocessing contract, in order:
    `classifier.mat` artifact into service environment variables.
 
 `train_classifier.m` normally uses pretrained weights. If pretrained loading
-fails with MATLAB service error 5006, its configured fallback can initialize
-the architecture without pretrained weights. The script warns about that
-fallback and saves `pretrainedWeightsUsed` in the MAT file. Treat such a run as
-training from scratch and retain that provenance with its metrics; it is a
-different experiment from transfer learning.
+fails with MATLAB service error 5006, its configured fallback constructs a
+local ResNet architecture using `resnetNetwork` without contacting the model
+service. For ResNet-18, the local call uses stack depths `[2 2 2 2]`, filter
+counts `[64 128 256 512]`, and `BottleneckType="none"`. It has random weights;
+the script warns about that fallback and saves `pretrainedWeightsUsed=false`
+in the MAT file. Treat such a run as training from scratch and retain that
+provenance with its metrics; it is a different experiment from transfer
+learning. The local fallback is implemented for `resnet18` and `resnet50`;
+`efficientnetb0` still requires its pretrained architecture to load normally.
 
 The API quality gate mirrors the MATLAB blur, exposure-clipping, and predicted
 wound-area checks. Its Laplacian kernel and thresholds are documented in

@@ -122,15 +122,15 @@ for f=1:cfg.cv.folds
     lossFcn=@(P,Targ)crossentropy(P,Targ,classWeights);
     if f==1
         [net,pretrainedWeightsUsed]=makeClassifierNetwork(backbone, ...
-            cfg.training.allowUninitializedBackboneFallback,true);
+            cfg.training.allowUninitializedBackboneFallback,true,imageSize);
         if pretrainedWeightsUsed
             fprintf("Classifier initialization: pretrained %s weights.\n",backbone);
         else
-            fprintf("Classifier initialization: uninitialized %s architecture (NO pretrained weights).\n",backbone);
+            fprintf("Classifier initialization: local %s architecture with random initialization (NO pretrained weights).\n",backbone);
         end
     else
         net=makeClassifierNetwork(backbone, ...
-            cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed);
+            cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed,imageSize);
     end
     augmenter=imageDataAugmenter( ...
         RandRotation=cfg.augmentation.rotationDegrees, ...
@@ -208,7 +208,7 @@ nLow=nnz(Y=="Low"); nElev=nnz(Y=="Elevated");
 finalWeights=single([n/(2*nLow),n/(2*nElev)]);
 finalLoss=@(P,Targ)crossentropy(P,Targ,finalWeights);
 finalNet=makeClassifierNetwork(backbone, ...
-    cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed);
+    cfg.training.allowUninitializedBackboneFallback,pretrainedWeightsUsed,imageSize);
 finalAugmenter=imageDataAugmenter( ...
     RandRotation=cfg.augmentation.rotationDegrees, ...
     RandXReflection=cfg.augmentation.horizontalReflection, ...
@@ -240,15 +240,16 @@ fprintf("Saved OOF CV rows: %s\n",fullfile(cfg.paths.results,"cv_results.csv"));
 fprintf("Saved calibration plot: %s\n",fullfile(cfg.paths.results,"calibration_plot.png"));
 
 %% Local functions
-function [net,pretrainedUsed]=makeClassifierNetwork(backbone,allowFallback,preferPretrained)
-% Prefer pretrained weights; use local architecture-only initialization only
-% after error 5006 and only when the config explicitly allows that fallback.
+function [net,pretrainedUsed]=makeClassifierNetwork(backbone,allowFallback,preferPretrained,inputSize)
+% Prefer pretrained weights. If MATLAB services fail with error 5006 and the
+% config allows it, build a local ResNet architecture with random weights.
+% resnetNetwork constructs the architecture without downloading model weights.
 if ~preferPretrained
     if ~allowFallback
         error("WoundWatch:UninitializedFallbackDisabled", ...
             "The current run requires uninitialized weights, but the fallback is disabled.");
     end
-    net=imagePretrainedNetwork(backbone,NumClasses=2,Weights="none");
+    net=makeLocalClassifierArchitecture(backbone,inputSize);
     pretrainedUsed=false;
     return
 end
@@ -262,19 +263,39 @@ catch ME
     end
     warning("WoundWatch:PretrainedWeightsUnavailable", ...
         "MATLAB service error 5006 prevented loading pretrained weights. " + ...
-        "Retrying with Weights=none. This is training from scratch, not " + ...
-        "transfer learning; its performance is not comparable to a pretrained " + ...
+        "Using a locally constructed architecture with random initialization. " + ...
+        "This is training from scratch, not transfer learning; its performance " + ...
+        "is not comparable to a pretrained " + ...
         "run. Install the matching Deep Learning Toolbox Model support package " + ...
         "and set cfg.training.allowUninitializedBackboneFallback=false when " + ...
         "you need the intended pretrained experiment.");
     try
-        net=imagePretrainedNetwork(backbone,NumClasses=2,Weights="none");
+        net=makeLocalClassifierArchitecture(backbone,inputSize);
     catch fallbackError
         error("WoundWatch:NetworkInitializationFailed", ...
-            "Pretrained loading failed with service error 5006 and local uninitialized architecture creation also failed. Pretrained error: %s Local architecture error: %s", ...
+            "Pretrained loading failed with service error 5006 and local architecture construction also failed. Pretrained error: %s Local architecture error: %s", ...
             ME.message,fallbackError.message);
     end
     pretrainedUsed=false;
+end
+end
+
+function net=makeLocalClassifierArchitecture(backbone,inputSize)
+% Exact documented local construction for ResNet-18. resnetNetwork was
+% introduced before R2024b and does not retrieve pretrained weights.
+switch backbone
+    case "resnet18"
+        net=resnetNetwork(inputSize,2, ...
+            StackDepth=[2 2 2 2], ...
+            NumFilters=[64 128 256 512], ...
+            BottleneckType="none");
+    case "resnet50"
+        % The documented default stack depth and bottleneck type define ResNet-50.
+        net=resnetNetwork(inputSize,2);
+    otherwise
+        error("WoundWatch:NoLocalArchitectureFallback", ...
+            "Offline local architecture fallback is implemented for resnet18 and resnet50, not '%s'. Install the matching model support package or choose resnet18.", ...
+            backbone);
 end
 end
 
