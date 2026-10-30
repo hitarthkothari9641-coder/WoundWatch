@@ -21,3 +21,6 @@ venv/
 *.mlappinstall
 *.mltbx
 *.log
+*.pt
+*.pth
+*.sqlite*
