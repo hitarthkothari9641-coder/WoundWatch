@@ -26,6 +26,12 @@ optional ONNX exports are provided for experimentation.
   differ from SurgWound; cross-dataset infection pretraining is not implemented
   in this Python conversion.
 
+Initial file audit covered 4,220 images: SurgWound 686, Kaggle 2,940, and
+Medetec 594. It found no unreadable files, exact-duplicate rows 0/2/2
+respectively, and average-hash near-match rows (Hamming distance <=6) 178 / 1,018
+/ 205. Near matches need visual review; they were not automatically removed
+from classifier folds.
+
 The classifier uses ImageNet-pretrained torchvision ResNet-18 weights if
 available, weighted cross-entropy, geometric augmentation only, and a final
 all-data fit after OOF evaluation. If pretrained weight retrieval fails, the
@@ -36,18 +42,23 @@ Dice loss; mask foreground is any positive pixel value, handling both 0/1 and
 
 ## Results
 
-Metrics are written by the training scripts to `results/cv_results.csv`,
-`results/segmentation_metrics.json`, and printed in the training log. No
-performance values are reported here until those artifacts are produced by a
-completed run. Do not substitute training metrics or literature values for
-held-out evaluation.
+The completed initial classifier run used ImageNet-pretrained ResNet-18,
+8 epochs per fold, image-stratified 5-fold CV, and a final 8-epoch fit on all
+686 images. Pooled OOF results:
 
-The classifier reports pooled OOF AUROC with bootstrap 95% CI, AUPRC and
-elevated-label prevalence baseline, sensitivity at >=90% specificity,
-cross-fitted Platt-calibrated Brier score, Youden threshold, and a threshold
-selected for sensitivity >=0.90. Segmentation reports validation and external
-Medetec Dice and IoU. ONNX parity is checked separately at maximum absolute
-output difference <=1e-3.
+- AUROC 0.7792 (stratified bootstrap 95% CI 0.7377–0.8213).
+- AUPRC 0.4029; Elevated prevalence baseline 0.1647.
+- Sensitivity 0.3363 at specificity 0.9058.
+- Cross-fitted Platt Brier score 0.11936 (mean squared probability error).
+- Calibrated Youden threshold 0.13271; sensitivity 0.8407, specificity
+  0.6370; confusion matrix TN=365, FP=208, FN=18, TP=95.
+- Calibrated threshold targeting sensitivity >=0.90: threshold 0.09532;
+  achieved sensitivity 0.9027 and specificity 0.4869.
+
+These are exploratory image-level CV results, not clinical performance
+claims. Segmentation validation/external metrics and ONNX parity remain pending
+until those stages are run. Metrics are saved to `results/cv_results.csv` and
+embedded in `models/classifier.pt` after the final fit.
 
 ## Preprocessing and inference
 

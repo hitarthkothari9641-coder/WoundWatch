@@ -59,7 +59,8 @@ class Pairs(Dataset):
             if random.random()<.5: im=im.transpose(Image.Transpose.FLIP_TOP_BOTTOM); mask=mask.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
             angle=random.uniform(-15,15); im=im.rotate(angle,resample=Image.Resampling.BILINEAR); mask=mask.rotate(angle,resample=Image.Resampling.NEAREST)
         h,w=self.size; im=im.resize((w,h),Image.Resampling.BILINEAR); mask=mask.resize((w,h),Image.Resampling.NEAREST)
-        x=np.asarray(im,dtype=np.float32)/255; x=(x-np.array([.485,.456,.406]))/np.array([.229,.224,.225])
+        x=np.asarray(im,dtype=np.float32)/255
+        x=(x-np.array([.485,.456,.406],dtype=np.float32))/np.array([.229,.224,.225],dtype=np.float32)
         return torch.from_numpy(x.transpose(2,0,1).copy()),torch.from_numpy((np.asarray(mask)>0).astype(np.int64))
 
 def loss_fn(logits,y):
