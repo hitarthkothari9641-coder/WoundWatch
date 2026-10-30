@@ -91,8 +91,10 @@ else
 end
 
 %% Stratified five-fold CV with class-weighted crossentropy
-cv=cvpartition(Y,"KFold",cfg.cv.folds);
-oofRaw=nan(n,1); foldID=zeros(n,1);
+% Assign folds locally. This avoids cvpartition's service dependency and keeps
+% each class distributed across all folds using the fixed project seed.
+foldAssignment=stratifiedFoldIDs(Y,cfg.cv.folds,cfg.seed);
+oofRaw=nan(n,1); foldID=foldAssignment;
 useGPU=false;
 try
     useGPU=canUseGPU;
@@ -111,7 +113,7 @@ fprintf("ExecutionEnvironment=%s; PreprocessingEnvironment=%s; minibatch=%d.\n",
     executionEnvironment,preprocessingEnvironment,miniBatch);
 
 for f=1:cfg.cv.folds
-    tr=training(cv,f); va=test(cv,f);
+    va=foldAssignment==f; tr=~va;
     nLow=nnz(Y(tr)=="Low"); nElev=nnz(Y(tr)=="Elevated");
     classWeights=single([nnz(tr)/(2*nLow),nnz(tr)/(2*nElev)]);
     lossFcn=dlaccelerate(@(P,Targ)crossentropy(P,Targ,classWeights));
@@ -127,7 +129,6 @@ for f=1:cfg.cv.folds
     options=classifierTrainingOptions(cfg,executionEnvironment,preprocessingEnvironment,miniBatch);
     net=trainnet(trainDS,net,lossFcn,options);
     oofRaw(va)=predictElevatedScores(net,images(:,:,:,va));
-    foldID(va)=f;
     fprintf("Finished CV fold %d/%d.\n",f,cfg.cv.folds);
 end
 if any(~isfinite(oofRaw))
@@ -223,6 +224,33 @@ fprintf("Saved OOF CV rows: %s\n",fullfile(cfg.paths.results,"cv_results.csv"));
 fprintf("Saved calibration plot: %s\n",fullfile(cfg.paths.results,"calibration_plot.png"));
 
 %% Local functions
+function foldID=stratifiedFoldIDs(Y,nFolds,seed)
+% Deterministic round-robin allocation after shuffling within each class.
+if ~iscategorical(Y) || ~isscalar(nFolds) || nFolds<2 || nFolds~=floor(nFolds)
+    error("WoundWatch:InvalidFoldConfiguration", ...
+        "Y must be categorical and nFolds must be an integer of at least 2.");
+end
+classNames=categories(Y);
+if numel(classNames)<2
+    error("WoundWatch:InsufficientClasses","Stratified folds require at least two classes.");
+end
+classCounts=countcats(Y);
+if any(classCounts<nFolds)
+    error("WoundWatch:InsufficientClassCount", ...
+        "Every class must contain at least %d samples for stratified folds.",nFolds);
+end
+rng(seed,"twister");
+foldID=zeros(numel(Y),1);
+for c=1:numel(classNames)
+    classRows=find(Y==classNames{c});
+    classRows=classRows(randperm(numel(classRows)));
+    foldID(classRows)=mod((0:numel(classRows)-1)',nFolds)+1;
+end
+if any(foldID==0)
+    error("WoundWatch:FoldAllocationFailed","Local stratified fold assignment left samples unassigned.");
+end
+end
+
 function image=readResizeRGB(path,outputSize)
 [A,map]=imread(path);
 if ~isempty(map)
