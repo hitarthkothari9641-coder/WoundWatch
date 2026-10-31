@@ -1,0 +1,7 @@
+# Set WOUNDWATCH_DOMAIN in the proxy environment. Caddy manages HTTPS.
+{$WOUNDWATCH_DOMAIN} {
+    request_body {
+        max_size 11MB
+    }
+    reverse_proxy app:8000
+}

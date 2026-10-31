@@ -1,0 +1,31 @@
+{
+  "protocol": "Frozen encoder; decoder fine-tuning on FUSeg train; selection only on validation Dice",
+  "baseline_validation_dice": 0.831013078993964,
+  "baseline_validation_iou": 0.7108831279983784,
+  "baseline_external_dice": 0.23583315323103524,
+  "baseline_external_iou": 0.1336796197383251,
+  "selected_epoch": 2,
+  "candidate_validation_dice": 0.8528048635564757,
+  "candidate_external_dice": 0.41615895067717024,
+  "candidate_external_iou": 0.2627529769196844,
+  "training_images": 810,
+  "validation_images": 200,
+  "external_images": 8,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.21416970233858368,
+      "validation_dice": 0.8473824595436215,
+      "validation_iou": 0.7351809510100814
+    },
+    {
+      "epoch": 2,
+      "loss": 0.20156066469204278,
+      "validation_dice": 0.8528048635564757,
+      "validation_iou": 0.7433825654110578
+    }
+  ],
+  "base_sha256": "60b6837613363aac794bbe19547287d28c4327b3355a564f4e6419dd420e1b9e",
+  "promoted": false,
+  "limitation": "Foot-ulcer data; no surgical-wound masks or patient-disjoint prospective validation"
+}

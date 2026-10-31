@@ -13,7 +13,7 @@ _THREAD_CONFIGURED = False
 def configure_threads():
     global _THREAD_CONFIGURED
     if not _THREAD_CONFIGURED:
-        torch.set_num_threads(max(1,min(8,os.cpu_count() or 1)))
+        torch.set_num_threads(max(1,min(int(os.getenv('WOUNDWATCH_TORCH_THREADS','2')),os.cpu_count() or 1)))
         try: torch.set_num_interop_threads(1)
         except RuntimeError: pass
         _THREAD_CONFIGURED = True
