@@ -151,7 +151,10 @@ python -m service.seed_kaggle_demo
 .\start.ps1 -KaggleDemo
 ```
 
-Open `http://127.0.0.1:8001`. Random credentials are written once to
+Open `http://127.0.0.1:8001`. Demo doctor accounts use the shared password
+`admin`; this intentionally weak password is for the loopback-only synthetic
+demo and must never be reused or exposed on a public deployment. Patient demo
+accounts use generated random passwords. Credentials are written once to
 `%LOCALAPPDATA%\WoundWatch\kaggle-demo-accounts.csv`; keep this file private.
 The public repository contains only `kaggle-demo-accounts.example.csv`, a
 redacted format example; passwords are intentionally excluded from GitHub.

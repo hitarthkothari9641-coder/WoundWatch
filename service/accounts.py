@@ -95,7 +95,9 @@ def new_session(user,response):
 class Credentials(BaseModel):
     model_config=ConfigDict(extra='forbid')
     email:str=Field(min_length=3,max_length=254)
-    password:str=Field(min_length=12,max_length=128)
+    # Login must accept existing legacy/demo passwords; account creation and
+    # password changes retain the 12-character minimum below.
+    password:str=Field(min_length=1,max_length=128)
     @field_validator('email')
     @classmethod
     def email_valid(cls,value):
@@ -104,6 +106,7 @@ class Credentials(BaseModel):
         return value
 
 class Registration(Credentials):
+    password:str=Field(min_length=12,max_length=128)
     name:str=Field(min_length=1,max_length=100)
     @field_validator('name')
     @classmethod

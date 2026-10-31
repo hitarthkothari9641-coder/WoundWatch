@@ -22,7 +22,7 @@ def main():
     os.environ['WOUNDWATCH_DATA_DIR'] = str(root)
     # Import after setting the isolated runtime path.
     from service import store
-    from service.accounts import create_user
+    from service.accounts import create_user, password_hash, audit
     from service.monitoring import wound_key
 
     paths, _, classes, _, _ = kaggle_originals(CFG.kaggle)
@@ -44,8 +44,8 @@ def main():
     for i in range(1, 3):
         name = f'DEMO Doctor {i:02d}'
         email = f'demo.doctor{i:02d}@woundwatch.invalid'
-        password = secrets.token_urlsafe(24)
-        user = create_user(email, name, password, role='clinician')
+        password = 'admin'
+        user = create_demo_clinician(store, password_hash, audit, email, name, password)
         clinicians.append(user)
         accounts.append({'role': 'clinician', 'email': email, 'password': password, 'display_name': name})
 
@@ -135,6 +135,16 @@ def main():
     print(f'Category comparison PDF: {reports / "kaggle_category_comparison.pdf"}')
     print(f'Runtime database and images: {root}')
     print('No Kaggle class is treated as an infection label. One unrelated example per category; no longitudinal claims.')
+
+
+def create_demo_clinician(store, password_hash, audit, email, name, password):
+    """Create a loopback-only demo clinician with the requested weak demo password."""
+    user_id = uuid4().hex
+    with store.connection() as db:
+        db.execute('INSERT INTO users(id,email,name,password_hash,role,patient_id) VALUES(?,?,?,?,?,NULL)',
+                   (user_id, email, name, password_hash(password), 'clinician'))
+        audit(db, 'account_created', user_id, user_id)
+    return dict(id=user_id, email=email, name=name, role='clinician', patient_id=None)
 
 
 def make_comparison_report(rows, out_dir):
