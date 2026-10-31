@@ -56,9 +56,44 @@ The completed initial classifier run used ImageNet-pretrained ResNet-18,
   achieved sensitivity 0.9027 and specificity 0.4869.
 
 These are exploratory image-level CV results, not clinical performance
-claims. Segmentation validation/external metrics and ONNX parity remain pending
-until those stages are run. Metrics are saved to `results/cv_results.csv` and
-embedded in `models/classifier.pt` after the final fit.
+claims. They must not be interpreted as unseen-patient performance: patient IDs
+are unavailable and the split was at image level. Metrics are saved to
+`results/cv_results.csv` and embedded in `models/classifier.pt`.
+
+### Separate held-out-split classifier candidate
+
+`python -m woundwatch.benchmark_classifier` selects a regularized logistic head
+over frozen ImageNet ResNet-18 features using nested stratified CV on the
+supplied train+validation images. It evaluates the supplied test split once.
+The test split has 137 images, including only 20 Elevated examples. Results:
+
+- Nested development OOF AUROC 0.6816; AUPRC 0.3710 against Elevated
+  prevalence 0.1694; cross-fitted calibrated Brier 0.1323.
+- Held-out test AUROC 0.8124 (image-bootstrap 95% CI 0.7038–0.9047); AUPRC
+  0.5417 against prevalence 0.1460; calibrated Brier 0.1120.
+- At the development-selected Youden threshold, test sensitivity was 0.65,
+  specificity 0.786, accuracy 0.766 (TN=92, FP=25, FN=7, TP=13).
+- At the threshold selected for at least 90% development OOF specificity,
+  test sensitivity was 0.50, specificity 0.880, accuracy 0.825 (TN=103,
+  FP=14, FN=10, TP=10). The test specificity fell below the 90% target.
+- At the threshold selected for at least 90% development OOF sensitivity, test
+  sensitivity was 1.00 but specificity was 0.00 (all 137 test images were
+  called Elevated).
+
+The candidate is saved separately as `models/classifier_candidate.pt`; the
+service still loads `models/classifier.pt`. The test-set result is not directly
+comparable to the original pooled OOF estimate because the data partition,
+training protocol, and evaluated population differ. With only 20 positive test
+images, the confidence interval is wide. The image-level bootstrap is not a
+patient-level interval. Do not promote this candidate or claim a clinical
+performance gain from this split alone. Do not tune repeatedly on the supplied
+test split. A patient-disjoint prospective cohort is needed for that claim.
+
+The segmentation artifacts report FUSeg validation Dice 0.8233 and IoU 0.6996
+(200 images); external Medetec test Dice 0.2044 and IoU 0.1138 (8 images).
+The external result shows substantial domain shift and is not a surgical-wound
+segmentation estimate. ONNX parity was within 4.77e-07 for the classifier and
+2.58e-05 for the segmenter on the checked images (tolerance 1e-3).
 
 ## Preprocessing and inference
 
@@ -75,6 +110,9 @@ not care recommendations.
 
 - Small, imbalanced dataset; only 23 High examples.
 - No patient IDs; image-level CV can leak related images across folds.
+- The provided test partition is also image-level; patient disjointness has not
+  been established. Average-hash links include label conflicts and are not
+  suitable as reconstructed patient identifiers.
 - Web and challenge images may not represent smartphone photos from surgical
   care settings.
 - No skin-tone labels; subgroup performance/calibration cannot be assessed.

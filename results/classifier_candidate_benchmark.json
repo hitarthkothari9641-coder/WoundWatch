@@ -1,0 +1,93 @@
+{
+  "nested_development_oof": {
+    "n": 549,
+    "elevated_prevalence": 0.16939890710382513,
+    "auroc": 0.6815930956423317,
+    "auprc": 0.3710212217265287,
+    "calibrated_brier": 0.13231122237431767
+  },
+  "heldout_test": {
+    "n": 137,
+    "elevated_n": 20,
+    "elevated_prevalence": 0.145985401459854,
+    "auroc": 0.8123931623931623,
+    "auroc_image_bootstrap_ci95": [
+      0.7038247863247864,
+      0.9047008547008547
+    ],
+    "auprc": 0.5416533406016054,
+    "auprc_prevalence_baseline": 0.145985401459854,
+    "calibrated_brier": 0.11199230788451836,
+    "youden_operating_point": {
+      "threshold_from_development": 0.2785421515235395,
+      "sensitivity": 0.65,
+      "specificity": 0.7863247863247863,
+      "accuracy": 0.7664233576642335,
+      "confusion_tn_fp_fn_tp": [
+        92,
+        25,
+        7,
+        13
+      ]
+    },
+    "sensitivity_090_operating_point": {
+      "threshold_from_development": 0.08079412007443082,
+      "sensitivity": 1.0,
+      "specificity": 0.0,
+      "accuracy": 0.145985401459854,
+      "confusion_tn_fp_fn_tp": [
+        0,
+        117,
+        0,
+        20
+      ]
+    },
+    "specificity_090_operating_point": {
+      "threshold_from_development": 0.3122320428965982,
+      "sensitivity": 0.5,
+      "specificity": 0.8803418803418803,
+      "accuracy": 0.8248175182481752,
+      "confusion_tn_fp_fn_tp": [
+        103,
+        14,
+        10,
+        10
+      ]
+    }
+  },
+  "selected_model": {
+    "mean_cv_auroc": 0.763514276214505,
+    "C": 0.001,
+    "class_weight": "balanced",
+    "backbone": "resnet18",
+    "head": "frozen_imagenet_logistic"
+  },
+  "cv_fold_selections": [
+    {
+      "mean_cv_auroc": 0.7435656448814343,
+      "C": 0.01,
+      "class_weight": null
+    },
+    {
+      "mean_cv_auroc": 0.7703130282506713,
+      "C": 0.001,
+      "class_weight": "balanced"
+    },
+    {
+      "mean_cv_auroc": 0.7947120099580054,
+      "C": 0.01,
+      "class_weight": null
+    },
+    {
+      "mean_cv_auroc": 0.76075631875117,
+      "C": 0.001,
+      "class_weight": null
+    },
+    {
+      "mean_cv_auroc": 0.7687313322324765,
+      "C": 0.001,
+      "class_weight": "balanced"
+    }
+  ],
+  "protocol": "Nested stratified image-level CV on supplied train+val; single evaluation on supplied test split; no patient IDs"
+}

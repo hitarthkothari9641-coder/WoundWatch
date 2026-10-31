@@ -37,6 +37,21 @@ OOF AUROC with bootstrap CI, AUPRC and prevalence baseline, calibration,
 Brier score, and Youden/sensitivity thresholds. Training produces
 `models/classifier.pt`, `results/cv_results.csv`, and a calibration plot.
 
+For a separate ResNet-18 model-selection benchmark that keeps the supplied
+`test` split out of training, run:
+
+```powershell
+python -m woundwatch.benchmark_classifier
+```
+
+This performs nested CV on the supplied `train`+`val` partitions, selects a
+regularized logistic head over frozen ImageNet features, and evaluates the
+supplied `test` split once. It saves `models/classifier_candidate.pt` and
+`results/classifier_candidate_benchmark.json`. The checkpoint is a research
+candidate and does not replace `models/classifier.pt` used by the service. The
+test split is image-level and has no patient IDs; do not describe it as
+patient-independent or use it repeatedly to tune models.
+
 Segmentation is a DeepLabV3+ decoder with a ResNet-18 encoder, trained on
 FUSeg masks using cross-entropy plus Dice loss. Masks with any positive value
 (including 1 and 255) are treated as wound. It reports FUSeg validation and
@@ -89,6 +104,7 @@ python -m woundwatch.test_erythema
 ```
 
 The Kaggle and Medetec folders are used for audit only. No cross-dataset
-infection-label pretraining is inferred from wound-type class names. Check
-licenses and duplicate leakage before any external use. Generated data,
-checkpoints, and results are excluded from Git.
+infection-label pretraining is inferred from wound-type class names. Dataset,
+checkpoint, and results files are tracked in this repository; review the data
+licenses and redistribution terms before sharing or using them outside this
+research project.
