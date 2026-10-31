@@ -61,3 +61,98 @@
 .badge.elevated{background:#fff3dc;color:#86621d}
 .review-outcome.urgent{display:inline-flex;padding:5px 8px;border-radius:6px;background:#fce6e2;color:#963c31}
 @media(max-width:600px){.sign-out span{display:none}}
+
+/* Wound Trace identity and patient-first home. */
+:root{--teal:#0E8388;--navy:#0C1E36;--muted:#52677D;--line:#E4E9EF;--pale:#E8F4EE;--crimson:#D92638;--saffron:#E25822;--gold:#F59E0B;--font-display:Outfit,"Avenir Next","Segoe UI",sans-serif;--font-body:"Plus Jakarta Sans","Avenir Next","Segoe UI",Arial,sans-serif;--font-mono:"Space Mono",Consolas,monospace;font-family:var(--font-body);color:var(--navy);background:#fff}
+body{font-family:var(--font-body);color:var(--navy);background:#fff}
+h1,h2,h3{font-family:var(--font-display);color:var(--navy)}
+h1{font-size:clamp(30px,3vw,40px);font-weight:800;letter-spacing:-.7px}
+h2{font-weight:750}
+a{color:var(--teal)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline-color:var(--gold)}
+.eyebrow{color:var(--teal);font-family:var(--font-mono);font-size:10px;letter-spacing:1px}
+.app-header{grid-template-columns:minmax(0,1fr) max-content minmax(0,1fr);background:rgba(255,255,255,.96);border-bottom-color:#E4E9EF}
+.app-header .brand{grid-column:1;justify-self:start;display:block;color:var(--navy);font-family:var(--font-display);font-size:23px;font-weight:800;letter-spacing:1.1px;line-height:1.1}
+.brand>span{display:block}
+.brand>span>span{color:var(--navy)}
+.brand small{margin-top:5px;color:#52677D;font-family:var(--font-mono);font-size:8px;letter-spacing:.55px;line-height:1.35}
+.nav-capsule{grid-column:2;justify-self:center;border-color:#E4E9EF;background:#fff;box-shadow:0 6px 24px #0C1E360c}
+.nav-capsule a{color:#52677D}
+.nav-capsule a:hover{background:#E8F4EE;color:var(--navy);transform:none}
+.nav-capsule a.active{background:var(--teal);color:#fff;box-shadow:0 3px 10px #0E838826}
+.account-capsule{grid-column:3;justify-self:end;border-color:#E4E9EF;background:#fff;box-shadow:0 6px 24px #0C1E360c}
+.account-link{color:var(--navy)}
+.account-link:hover{background:#E8F4EE;transform:none}
+.account-link .avatar{background:#E8F4EE;color:var(--navy)}
+.notification-count{background:var(--saffron)}
+.sign-out:hover{background:#FCEBED;color:var(--crimson)}
+.home-feature-grid{grid-template-columns:minmax(0,.7fr) minmax(0,1fr);gap:24px;margin-top:8px;margin-bottom:32px}
+.scan-prompt{align-self:stretch;min-height:330px;align-items:center;padding:30px;background:#E8F4EE;border-color:#D7E9E1}
+.scan-prompt-copy{flex:1}
+.scan-prompt h2{margin:15px 0 10px;font-size:clamp(27px,2vw,31px);line-height:1.16;letter-spacing:-.6px}
+.scan-prompt-copy>p{max-width:310px;margin:0 0 18px;color:#52677D;font-size:15px;line-height:1.55}
+.scan-prompt .button{margin-top:1px;background:var(--teal);border-color:var(--teal);border-radius:11px;font-weight:750}
+.scan-prompt .button:hover,.button:hover{background:#0A6E73;border-color:#0A6E73}
+.scan-prompt-art{flex:0 1 48%;width:48%;height:auto;min-width:170px;border:0;border-radius:0;background:transparent;color:inherit}
+.scan-prompt-art svg{display:block;width:100%;height:auto;max-height:290px}
+.latest-update{align-self:stretch;padding:27px;border-color:#E4E9EF;box-shadow:0 8px 28px #0C1E3608}
+.latest-update>.section-heading{align-items:flex-start;margin-bottom:14px}
+.latest-update>.section-heading>.icon{color:var(--teal)}
+.latest-update .section-heading h2{margin-top:5px;font-size:23px}
+.latest-photo-label{margin:0 0 7px;color:#52677D;font-size:13px;font-weight:700}
+.latest-scan-image{width:112px;height:90px;margin:3px 0 8px 14px;border-color:#E4E9EF;background:#F7F9FA}
+.latest-result{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.risk-category{color:#52677D;font-size:13px;font-weight:700}
+.latest-update .status-explanation{font-size:13px;line-height:1.55}
+.latest-update .details>div{gap:12px}
+.latest-update .details dt,.latest-update .details dd{font-size:13px}
+.latest-update .button{min-height:44px;border-radius:10px}
+.badge.low{background:#E8F4EE;color:#0C665F}
+.badge.elevated{background:#FFF3DC;color:#82520A}
+.badge.defer,.badge.retake{background:#FCEBED;color:#A21E2E}
+.card{border-color:#E4E9EF;box-shadow:0 8px 28px #0C1E3608}
+.section-heading{align-items:flex-start}
+.page-heading p,.muted{color:#52677D}
+.auth-story{background:#E8F4EE}
+.auth-box .button{border-radius:11px}
+.research-note{border-color:#E4E9EF}
+.notification-popover{border-color:#E4E9EF;box-shadow:0 16px 60px #0C1E3620}
+.event.is-unread{background:#FFF7E8;border-left-color:var(--gold)}
+.doctor-review .review-record{border-left-color:var(--teal);background:#E8F4EE}
+.review-outcome.urgent{background:#FCEBED;color:#A21E2E}
+@media(max-width:1100px){
+  .app-header{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:12px 16px;padding:15px 24px}
+  .app-header .brand{grid-column:1;grid-row:1}
+  .account-capsule{grid-column:2;grid-row:1}
+  .nav-capsule{grid-column:1/-1;grid-row:2;justify-self:center}
+  .app-header .brand small{display:none}
+  .home-feature-grid{grid-template-columns:minmax(0,.7fr) minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .home-feature-grid{grid-template-columns:1fr}
+  .scan-prompt{min-height:290px}
+  .scan-prompt-art{flex-basis:44%;width:44%;min-width:185px}
+  .scan-prompt h2{font-size:30px}
+  .latest-update{min-height:0}
+}
+@media(max-width:480px){
+  .app-header{grid-template-columns:minmax(0,1fr) auto;padding:12px 14px;column-gap:7px;row-gap:10px}
+  .app-header .brand{font-size:18px;letter-spacing:.7px}
+  .app-header .brand small{display:none}
+  .account-capsule{gap:1px;padding:3px}
+  .account-label{display:none}
+  .account-link{padding:4px}
+  .account-link .avatar{width:31px;height:31px}
+  .sign-out span{display:none}
+  .sign-out{min-width:38px;padding:0}
+  .nav-capsule{width:100%;max-width:360px;gap:3px;padding:5px}
+  .nav-capsule a{flex:1;gap:5px;padding:10px 7px;font-size:12px}
+  .nav-capsule .icon{width:17px;height:17px}
+  .shell>main{padding:24px 16px 90px}
+  .scan-prompt{min-height:0;padding:22px}
+  .scan-prompt-art{flex-basis:42%;width:42%;min-width:125px}
+  .scan-prompt h2{font-size:27px}
+  .scan-prompt-copy>p{font-size:14px}
+  .latest-update{padding:21px}
+  .latest-scan-image{width:88px;height:78px;margin-left:10px}
+}

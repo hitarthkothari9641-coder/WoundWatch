@@ -1,9 +1,14 @@
-# WoundWatch application
+# Wound Trace application
 
-WoundWatch is now a patient-first monitoring application with real patient and
+Wound Trace is a patient-first monitoring application with real patient and
 clinician accounts. The existing FastAPI, SQLite, PyTorch and plain-JavaScript
 architecture is retained. No model algorithms or weights were changed by the
 interface redesign.
+
+The official brand-kit rules, logo files and font assets were not present in the
+repository when this redesign was applied. The interface uses the requested
+colour values and local font fallbacks; replace the text wordmark with the
+approved logo assets when the kit is supplied. No substitute logo was created.
 
 **Read [PATIENT_GUIDE.md](PATIENT_GUIDE.md)** for exact start commands, accounts,
 linking old patient records, heatmap/Grad-CAM steps, file inventory and testing.

@@ -1,4 +1,4 @@
-# WoundWatch
+# Wound Trace
 
 ## Local web dashboard
 

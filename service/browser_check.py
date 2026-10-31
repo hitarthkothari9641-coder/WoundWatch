@@ -21,6 +21,7 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.on('response',lambda r:errors.append(f'{r.status}: {r.url}') if r.status>=400 and not(r.status==401 and r.url.endswith('/api/auth/me')) else None)
     page.goto(url)
+    assert page.title()=='Wound Trace - Your wound journey'
     assert page.get_by_role('tab',name='Patient Login').is_visible()
     assert page.get_by_role('tab',name='Doctor Login').is_visible()
     page.locator('#sign-up-tab').click()
@@ -38,6 +39,9 @@ with sync_playwright() as p:
     mismatch_context.close()
     assert page.locator('nav a').all_text_contents()==['Home','My Profile','Settings']
     assert page.locator('.nav-capsule').count()==1 and page.locator('.account-capsule').count()==1
+    nav_box=page.locator('.nav-capsule').bounding_box()
+    assert abs(nav_box['x']+nav_box['width']/2-720)<1,'Main navigation should be mathematically centered'
+    assert page.locator('.mobile-scan').count()==0,'The hero is the patient home scan action'
     assert page.locator('.scan-prompt').count()==1 and page.locator('.latest-update').count()==1
     assert page.locator('.tips-card').count()==0
     prompt_width=page.locator('.scan-prompt').bounding_box()['width']
@@ -63,6 +67,7 @@ with sync_playwright() as p:
         assert response.value.status==201,response.value.text()
         page.locator('#scan-detail').wait_for()
     page.locator('nav a[href="#home"]').click()
+    assert page.locator('.latest-photo-label').inner_text()=='Latest photograph'
     page.screenshot(path='test-results/patient-home-desktop.png',full_page=True)
     assert page.locator('aside,#sidebar,#menu').count()==0
     page.locator('#notification-bell').click()
@@ -91,7 +96,7 @@ with sync_playwright() as p:
     page.screenshot(path='test-results/patient-comparison.png',full_page=True)
     page.locator('[data-tab=report]').click()
     with page.expect_download() as downloaded:
-        page.get_by_role('link',name='Download PDF report').click()
+        page.get_by_role('link',name='Download analysis PDF for clinician review').click()
     downloaded.value.save_as('test-results/patient-report.pdf')
     assert Path('test-results/patient-report.pdf').read_bytes().startswith(b'%PDF')
     me=page.request.get(url+'/api/auth/me').json();patient_id=me['user']['patient_id']
@@ -100,10 +105,12 @@ with sync_playwright() as p:
     with store.connection() as db:db.execute('INSERT INTO assignments VALUES(?,?)',(doctor['id'],patient_id))
     page.locator('nav a[href="#home"]').click()
     page.set_viewport_size({'width':390,'height':844})
+    assert page.locator('.mobile-scan').count()==0,'The home hero already exposes the primary scan action'
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'Mobile page overflows'
     page.screenshot(path='test-results/patient-home-mobile.png',full_page=True)
     page.locator('nav a[href="#profile"]').click()
     page.get_by_role('heading',name='My Profile',exact=True).wait_for()
+    assert page.locator('.mobile-scan').is_visible(),'Keep a scan action available from the patient profile on mobile'
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'Mobile profile overflows'
     for width in (320,375,768,1024,1440):
         page.set_viewport_size({'width':width,'height':900})

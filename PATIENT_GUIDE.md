@@ -1,4 +1,4 @@
-# WoundWatch: patient and healthcare-worker guide
+# Wound Trace: patient and healthcare-worker guide
 
 ## Start the application
 

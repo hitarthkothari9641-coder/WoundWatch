@@ -132,7 +132,7 @@ def report(identifier:str):
     except Exception: overlays=[]
     try:
         with pdf_lock,PdfPages(out) as pdf:
-            fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'WoundWatch | Monitoring report',fontsize=20,color='#19324d',parse_math=False)
+            fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Monitoring report',fontsize=20,color='#0C1E36',parse_math=False)
             y=.89
             for line in lines:
                 for segment in textwrap.wrap(line,90):fig.text(.08,y,segment,fontsize=10,parse_math=False);y-=.025
@@ -141,7 +141,7 @@ def report(identifier:str):
             ax.axis('off');fig.text(.08,.1,'Research screening only. This report does not confirm or exclude infection.',fontsize=10,parse_math=False)
             fig.text(.08,.07,'This does not replace clinical examination or professional medical diagnosis.',fontsize=10,parse_math=False);pdf.savefig(fig)
             for title,overlay in overlays:
-                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'WoundWatch | Visual analysis',fontsize=18,color='#19324d',parse_math=False)
+                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Visual analysis',fontsize=18,color='#0C1E36',parse_math=False)
                 ax=fig.add_axes([.1,.18,.8,.7]);ax.imshow(overlay);ax.axis('off')
                 fig.text(.08,.1,title,fontsize=10,parse_math=False)
                 fig.text(.08,.07,'Visualization only. It does not establish wound boundaries, infection, or clinical cause.',fontsize=9,parse_math=False);pdf.savefig(fig)
@@ -155,7 +155,7 @@ def report(identifier:str):
             detail+=['','MONITORING HISTORY (same wound)']+[f"{s['scan_date']} | {s['result']['risk_band']} | review: {s['review_status']}" for s in history]
             wrapped=[part for line in detail for part in (textwrap.wrap(line,95) or [''])]
             for offset in range(0,len(wrapped),40):
-                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'WoundWatch | Measurements and history',fontsize=17,parse_math=False)
+                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Measurements and history',fontsize=17,color='#0C1E36',parse_math=False)
                 for i,line in enumerate(wrapped[offset:offset+40]):fig.text(.08,.89-i*.019,line,fontsize=9,parse_math=False)
                 pdf.savefig(fig)
     except OSError:raise HTTPException(404,'Stored photograph is unavailable')
