@@ -5,9 +5,7 @@ test-results
 experiments
 data
 results
-models/*
-!models/classifier.pt
-!models/segmenter.pt
+models
 .env
 .env.*
 __pycache__
