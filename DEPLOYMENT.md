@@ -5,16 +5,21 @@ Grad-CAM. It is a hardened **research application**, not a clinically validated
 production medical device. Do not represent software deployment controls as
 evidence that infection screening is clinically accurate.
 
-## Local use
+## Local use and account migration
 
-Restart the existing server after pulling these changes, then run `start.ps1`.
-Select a scan under Colour Drift Analysis. For existing records:
+Read [PATIENT_GUIDE.md](PATIENT_GUIDE.md) for the current sign-in and account
+setup. The patient-first redesign adds mandatory patient/clinician sessions and
+backend record permissions. Existing records remain intact but unassigned until
+an administrator explicitly links them; no destructive migration is performed.
 
-1. Click **Recalculate colour** to populate the current measurement method.
-2. Recalculate the earlier scan too, if present.
-3. Select the later scan, choose an earlier scan of the same wound/surgery and
-   click **Save comparison**. A single image cannot have longitudinal drift.
-4. Generate **colour heatmap** or **Grad-CAM** using the respective buttons.
+Restart the server with `start.ps1`, sign in, and open **My Profile ? My Wound
+Journey ? View details ? Colour comparison**. Generate overlays under **Explore
+colour heatmap and AI attention map**. For older records, **Re-analyse saved
+image** creates a new versioned result without overwriting the original.
+
+Choose an earlier photo of the same wound to compare. Recalculate colour on
+both records if their measurement or segmenter versions differ. Reports are
+available in the selected scan's **Reports** tab as downloadable PDFs.
 
 Colour extraction is now independent of the classifier quality gate. Retake
 photos can display raw measurements if a wound/ring is measurable, with a
@@ -37,33 +42,34 @@ differences would be misleading with different camera positions.
 Grad-CAM uses gradients of the raw Elevated logit at ResNet-18 layer4, spatial
 gradient averaging, weighted activations, ReLU and per-image normalization.
 It does not alter weights or parameter gradients. Older scans without a
-recorded classifier fingerprint cannot receive a traceable Grad-CAM: upload a
-new scan. Flat positive activation is reported as unavailable. This coarse
+recorded classifier fingerprint cannot receive a traceable historical Grad-CAM:
+use Re-analyse saved image to create a new versioned analysis. Flat positive activation is reported as unavailable. This coarse
 explanation can be misleading and is not a diagnostic mask. Method reference:
 [original Grad-CAM paper](https://arxiv.org/abs/1610.02391).
 
 ## Controlled research deployment
 
-Added controls: optional operator HTTP Basic authentication, fail-closed
-production configuration, HTTPS requirement, explicit host allowlist,
-cross-origin write rejection, body limits including chunked requests,
-private/no-store responses, HSTS in production, model fingerprints, startup
-model checks, SQLite WAL/busy timeout, non-root container and a private
-application network. Credentials are read only from server environment variables.
+Named patient/clinician accounts and server-side record authorization are now
+mandatory. Sessions use hashed random tokens, HttpOnly/SameSite cookies, expiry
+and CSRF validation. Patient registration cannot create clinician privileges;
+clinicians and assignments are provisioned through `service.manage`. See the
+patient guide for all commands. Optional HTTP Basic credentials are an extra
+service gate only; they do not replace a named account or grant record access.
 
-These controls are for a single trusted operator. They do not provide named-user
-roles, audited clinical sign-off, account recovery, MFA or a regulated security
-programme. Deploy behind your organization's identity-aware access proxy with
-MFA and request/login rate limits; the built-in Basic authentication is an
-additional service gate, not a replacement for those controls.
+Retained controls include production host/HTTPS guards, request-size limits,
+no-store responses, model fingerprints, SQLite WAL and a non-root container.
+Production uses Secure cookies and HSTS. Selected mutations are audited with
+account IDs, but the audit is not tamper-proof and does not cover every read.
+MFA, email verification/recovery and external identity integration remain
+unimplemented. These controls do not establish clinical production readiness.
 
 1. Install Docker and Compose on a reviewed host. Docker was unavailable in
    the implementation environment, so container build/TLS deployment remains
    unverified; the manifests were syntax-checked only.
-2. Copy `.env.example` to `.env`. Set `WOUNDWATCH_USERNAME` and a unique random
-   `WOUNDWATCH_PASSWORD` of at least 24 characters, `WOUNDWATCH_ENV=production`,
-   `WOUNDWATCH_DOMAIN` to your real DNS name, and `WOUNDWATCH_ALLOWED_HOSTS` to
-   that hostname plus `127.0.0.1`. Never commit `.env`.
+2. Copy `.env.example` to `.env`. Set `WOUNDWATCH_ENV=production`,
+   `WOUNDWATCH_DOMAIN` to your DNS name, and `WOUNDWATCH_ALLOWED_HOSTS` to that
+   hostname plus `127.0.0.1`. Provision clinician accounts against the mounted
+   data volume with `python -m service.manage`. Never commit `.env` or passwords.
 3. Set `MAX_IMAGE_PIXELS=4000000` for a conservative memory bound and establish
    memory/concurrency limits appropriate to your workload through load tests.
 4. Confirm dataset/weight redistribution and deployment permissions before
@@ -154,6 +160,6 @@ to one after memory pressure appeared during concurrent test processes.
 Before clinical production: acquire representative consented longitudinal
 surgical-wound photos with masks and outcomes; evaluate patient-disjoint cohorts
 and skin-tone/device subgroups; clinically validate operating thresholds; obtain
-applicable review/approvals; implement organization-managed identity, audit and
+applicable review/approvals; complete organization-managed identity/MFA, comprehensive audit and
 data lifecycle controls; complete load, penetration, backup/restore and deployed
 TLS tests. These are still release blockers, not completed features.

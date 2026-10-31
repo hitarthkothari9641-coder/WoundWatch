@@ -13,6 +13,7 @@ import hashlib
 from functools import lru_cache
 from contextlib import asynccontextmanager
 from .security import SecurityMiddleware, configuration
+from .accounts import AccountMiddleware, router as account_router
 from woundwatch.config import CFG
 
 from woundwatch.inference import load_classifier,load_segmenter,predict_image
@@ -84,6 +85,9 @@ def decode_image(data):
 
 from .dashboard import router
 app.include_router(router)
+app.include_router(account_router)
+from .monitoring import router as monitoring_router
+app.include_router(monitoring_router)
 WEB = Path(__file__).resolve().parent / 'web'
 app.mount('/assets', StaticFiles(directory=WEB), name='assets')
 
@@ -104,4 +108,5 @@ async def private_responses(request, call_next):
     response.headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-ancestors 'none'"
     return response
 
+app.add_middleware(AccountMiddleware)
 app.add_middleware(SecurityMiddleware)

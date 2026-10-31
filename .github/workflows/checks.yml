@@ -21,7 +21,7 @@ jobs:
       - run: python -m unittest discover -s python/tests -v
         env:
           PYTHONPATH: python
-      - run: python -m unittest service.test_dashboard service.test_security -v
+      - run: python -m unittest service.test_dashboard service.test_security service.test_accounts -v
         env:
           PYTHONPATH: python
-      - run: node --check service/web/app.js && node --check service/web/visualizations.js
+      - run: node --check service/web/app.js && node --check service/web/views.js && node --check service/web/visualizations.js

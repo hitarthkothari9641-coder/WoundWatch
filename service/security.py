@@ -12,8 +12,8 @@ def configuration():
     username=os.getenv('WOUNDWATCH_USERNAME','')
     password=os.getenv('WOUNDWATCH_PASSWORD','')
     hosts=[h.strip() for h in os.getenv('WOUNDWATCH_ALLOWED_HOSTS','localhost,127.0.0.1,::1,testserver').split(',') if h.strip()]
-    if production and (not username or len(password)<24 or not os.getenv('WOUNDWATCH_ALLOWED_HOSTS') or '*' in hosts):
-        raise RuntimeError('Production requires username, password of at least 24 characters, and explicit allowed hosts')
+    if production and (not os.getenv('WOUNDWATCH_ALLOWED_HOSTS') or '*' in hosts):
+        raise RuntimeError('Production requires explicit allowed hosts')
     if bool(username)!=bool(password): raise RuntimeError('Set both WOUNDWATCH_USERNAME and WOUNDWATCH_PASSWORD')
     return production,username,password,hosts
 

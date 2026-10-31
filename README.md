@@ -2,9 +2,11 @@
 
 ## Local web dashboard
 
-The repository now includes a responsive patient and wound-monitoring dashboard
-integrated with the existing checkpoints. See [WEB_APP.md](WEB_APP.md) for setup,
-model capabilities, storage, testing and a beginner walkthrough. Start with
+The repository includes a patient-first monitoring app with patient and clinician
+accounts, authorised per-wound timelines, colour comparisons and PDF reports,
+integrated with the existing checkpoints. Start with [PATIENT_GUIDE.md](PATIENT_GUIDE.md)
+for account setup, existing-record linking, heatmaps and testing. See
+[WEB_APP.md](WEB_APP.md) for architecture and limitations. Start with
 `.\start.ps1` after installing dependencies; open http://127.0.0.1:8000.
 
 

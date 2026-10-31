@@ -16,6 +16,7 @@ from woundwatch.config import CFG
 from woundwatch.common import read_rgb
 from woundwatch.visualization import colour_analysis, colour_heatmap, gradcam, compare_features
 from . import store
+from .accounts import actor, clinician, authorize, patient_ids, audit
 
 router = APIRouter(prefix='/api')
 inference_lock = threading.Lock()
@@ -27,6 +28,8 @@ def required(table, identifier):
     value = store.get(table, identifier)
     if value is None:
         raise HTTPException(404, 'Record not found')
+    if table=='patients':authorize(value['id'])
+    elif table in ('scans','wounds'):authorize(value['patient_id'])
     return value
 
 class Patient(BaseModel):
@@ -47,16 +50,24 @@ class Patient(BaseModel):
 
 @router.get('/patients')
 def patients():
-    return store.records('patients')
+    allowed=patient_ids()
+    sites=store.records('wounds')+store.records('scans')
+    return [{**p,'surgery_dates':sorted({s['surgery_date'] for s in sites if s['patient_id']==p['id']}|({p['surgery_date']} if p.get('surgery_date') else set()))}
+            for p in store.records('patients') if p['id'] in allowed]
 
 @router.post('/patients', status_code=201)
 def create_patient(body: Patient):
+    user=clinician()
     record = dict(id='P-' + uuid4().hex[:10], created_at=now(), **body.model_dump(mode='json'))
     store.save('patients', record)
+    with store.connection() as db:
+        db.execute('INSERT INTO assignments VALUES(?,?)',(user['id'],record['id']))
+        audit(db,'patient_created',record['id'])
     return record
 
 @router.put('/patients/{identifier}')
 def edit_patient(identifier: str, body: Patient):
+    clinician()
     record = required('patients', identifier)
     record.update(body.model_dump(mode='json'))
     store.save('patients', record)
@@ -64,7 +75,10 @@ def edit_patient(identifier: str, body: Patient):
 
 @router.get('/scans')
 def scans(patient_id: str | None = None):
-    return [s for s in store.records('scans') if not patient_id or s['patient_id'] == patient_id]
+    from .monitoring import enrich_scan
+    allowed=patient_ids()
+    if patient_id:authorize(patient_id)
+    return [enrich_scan(s) for s in store.records('scans') if s['patient_id'] in allowed and (not patient_id or s['patient_id'] == patient_id)]
 
 @router.get('/scans/{identifier}/image')
 def scan_image(identifier: str):
@@ -74,9 +88,22 @@ def scan_image(identifier: str):
 @router.post('/scans', status_code=201)
 def create_scan(file: UploadFile = File(...), patient_id: str = Form(...),
                 scan_date: date = Form(...), wound_location: str = Form(...),
-                surgery_date: date = Form(...), previous_id: str = Form('')):
+                surgery_date: date = Form(...), previous_id: str = Form(''), wound_id: str = Form(''),
+                captured_at: str = Form('')):
     from .app import decode_image, models_once, MAX_BYTES
     patient = required('patients', patient_id)
+    from .monitoring import wound_key, get_wound
+    if wound_id:
+        wound=get_wound(patient_id,wound_id)
+        if wound['surgery_date']!=surgery_date.isoformat() or wound['wound_location'].casefold()!=wound_location.strip().casefold():
+            raise HTTPException(422,'Selected wound does not match the supplied surgery and location')
+        patient={**patient,'surgery_type':wound['surgery_type'],'surgery_date':wound['surgery_date'],'wound_location':wound['wound_location']}
+    if captured_at:
+        try:
+            capture=datetime.fromisoformat(captured_at)
+            if not capture.tzinfo or capture.date()!=scan_date or capture.timestamp()>datetime.now(timezone.utc).timestamp()+300:
+                raise ValueError()
+        except ValueError:raise HTTPException(422,'Enter a valid photograph time with timezone matching the scan date')
     location = wound_location.strip()
     if not location or len(location) > 100:
         raise HTTPException(422, 'Wound location must contain 1–100 characters')
@@ -114,6 +141,7 @@ def create_scan(file: UploadFile = File(...), patient_id: str = Form(...),
                         'colour_comparison': 'complete' if drift else 'unavailable'})
     from .app import model_fingerprints, model_paths
     scan.update(colour, comparison_error=comparison_error, model_fingerprints=model_fingerprints(),
+                wound_id=wound_key(patient_id,surgery_date.isoformat(),location),captured_at=captured_at or None,
                 model=' / '.join(p.name for p in model_paths().values()),
                 colour_warning='Quality gate requested a retake; raw colour is unreliable.' if result['status']=='retake' else None)
     with store.connection() as db:
@@ -125,6 +153,7 @@ def create_scan(file: UploadFile = File(...), patient_id: str = Form(...),
             if result['risk_band'] == 'elevated': message += ' · elevated screening result for clinical review'
             event = dict(id=uuid4().hex, scan_id=identifier, created_at=now(), message=message, read=False)
             db.execute('INSERT INTO events VALUES(?,?)', (event['id'], json.dumps(event)))
+            audit(db,'scan_created',identifier)
             db.commit()
         except Exception:
             path.unlink(missing_ok=True)
@@ -133,6 +162,20 @@ def create_scan(file: UploadFile = File(...), patient_id: str = Form(...),
 
 class Comparison(BaseModel):
     previous_id: str | None = None
+
+@router.post('/scans/{identifier}/reanalyse',status_code=201)
+def reanalyse_scan(identifier:str):
+    source=required('scans',identifier)
+    try:handle=(store.ROOT/'images'/source['image_file']).open('rb')
+    except OSError:raise HTTPException(404,'Saved photograph is missing. Please upload it again.')
+    with handle:
+        scan=create_scan(file=UploadFile(file=handle,filename='saved.png'),patient_id=source['patient_id'],
+            scan_date=date.fromisoformat(source['scan_date']),wound_location=source['wound_location'],
+            surgery_date=date.fromisoformat(source['surgery_date']),previous_id=source.get('previous_id') or '',
+            wound_id='',captured_at=source.get('captured_at') or '')
+    scan['reanalysis_of']=identifier
+    with store.connection() as db:db.execute('UPDATE scans SET payload=? WHERE id=?',(json.dumps(scan),scan['id']))
+    return scan
 
 def validate_previous(scan,previous):
     if (previous['id']==scan['id'] or previous['patient_id']!=scan['patient_id']
@@ -187,7 +230,7 @@ def visualization(identifier: str,kind: Literal['colour','gradcam']):
     if kind=='gradcam' and scan['result']['status']=='retake':
         raise HTTPException(422,'Grad-CAM unavailable: classification was skipped by the quality gate')
     if kind=='gradcam' and scan.get('model_fingerprints',{}).get('classifier')!=model_fingerprints()['classifier']:
-        raise HTTPException(409,'Stored classifier version is unverified or different. Upload a new scan for a traceable Grad-CAM.')
+        raise HTTPException(409,'This older scan has no matching model version. Choose Re-analyse saved image, then generate Grad-CAM from the new analysis.')
     try:
         image=read_rgb(store.ROOT/'images'/scan['image_file'])
         if kind=='colour': output=colour_heatmap(image)
@@ -208,21 +251,25 @@ class Review(BaseModel):
 
 @router.patch('/scans/{identifier}/review')
 def review(identifier: str, body: Review):
+    user=clinician()
     scan = required('scans', identifier)
-    scan.update(review_status=body.status, reviewed_at=now() if body.status == 'reviewed' else None)
+    scan.update(review_status=body.status, reviewed_at=now() if body.status == 'reviewed' else None,reviewed_by=user['id'])
     with store.connection() as db:
         db.execute('UPDATE scans SET payload=? WHERE id=?', (json.dumps(scan), identifier))
+        audit(db,'scan_reviewed',identifier)
     return scan
 
 @router.get('/notifications')
 def notifications():
-    return store.records('events')
+    allowed={s['id'] for s in scans()}
+    with store.connection() as db:
+        read={r[0] for r in db.execute('SELECT event_id FROM event_reads WHERE user_id=?',(actor()['id'],))}
+    return [{**e,'read':e['id'] in read} for e in store.records('events') if e.get('scan_id') in allowed]
 
 @router.post('/notifications/read')
 def mark_read():
-    for event in store.records('events'):
-        event['read'] = True
-        store.save('events', event)
+    with store.connection() as db:
+        for event in notifications():db.execute('INSERT OR IGNORE INTO event_reads VALUES(?,?)',(actor()['id'],event['id']))
     return {'status': 'ok'}
 
 @router.get('/settings')
@@ -233,5 +280,5 @@ def settings():
     return {'max_upload_bytes': MAX_BYTES, 'max_image_pixels': MAX_PIXELS,
             'mode': 'Local research workspace', 'lighting_correction': False,
             'classifier': 'ResNet-18 / binary Low versus Elevated',
-            'segmenter': 'DeepLabV3+ / ResNet-18', 'authentication': bool(username),
-            'production_guards':production}
+            'segmenter': 'DeepLabV3+ / ResNet-18', 'authentication': True,
+            'production_guards':production,'visualization_version':2,'account_version':1}

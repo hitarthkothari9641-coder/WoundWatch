@@ -1,184 +1,136 @@
-# WoundWatch local web application
+# WoundWatch application
 
-**Colour-analysis update:** See [DEPLOYMENT.md](DEPLOYMENT.md) for heatmaps,
-Grad-CAM, linking/recalculating older scans, retraining and deployment controls.
-The older implementation notes below describe the initial dashboard; the
-update changes colour processing and adds optional operator authentication.
+WoundWatch is now a patient-first monitoring application with real patient and
+clinician accounts. The existing FastAPI, SQLite, PyTorch and plain-JavaScript
+architecture is retained. No model algorithms or weights were changed by the
+interface redesign.
 
-## Start here (Windows PowerShell)
+**Read [PATIENT_GUIDE.md](PATIENT_GUIDE.md)** for exact start commands, accounts,
+linking old patient records, heatmap/Grad-CAM steps, file inventory and testing.
+Read [DEPLOYMENT.md](DEPLOYMENT.md) for host deployment requirements and limits.
 
-Run from the repository root. Python 3.14 was available for this implementation;
-Python 3.11+ with compatible torch/torchvision wheels also works.
+## Run locally
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python -m pip install -r service\requirements-dev.txt
 .\start.ps1
 ```
 
-Open **http://127.0.0.1:8000**. The frontend is plain HTML, CSS and JavaScript
-served by FastAPI; there is no npm installation or frontend compilation step.
-If PowerShell blocks scripts, run the equivalent commands directly:
+Open http://127.0.0.1:8000. Stop an old server with Ctrl+C first. If you see a
+backend-version warning or missing visualization routes, restart the Python
+server and refresh the browser with Ctrl+Shift+R.
 
-```powershell
-$env:PYTHONPATH = "$PWD\python"
-.\.venv\Scripts\python -m uvicorn service.app:app --host 127.0.0.1 --port 8000 --no-access-log
-```
+Patient registration creates a new private patient record. Clinician accounts
+and links to existing patient records require the administrator commands in
+PATIENT_GUIDE.md. There is no default password and no fake role selector.
 
-Stop with Ctrl+C. Keep local mode bound to localhost. Optional operator
-authentication and production guards are documented in DEPLOYMENT.md;
-encryption at rest, multi-user permissions and clinical audit signatures remain
-deployment requirements. Use research aliases where possible.
+## Navigation
 
-## Try a photograph
+Both patients and healthcare workers use the same compact **Home / My Profile /
+Settings** navigation capsule. Notifications are available from the header
+bell, rather than a separate page. Patients can start a scan from the Home
+screen's prominent **Scan My Wound** action or the persistent mobile action.
+Their AI analysis, risk status, scan history, colour comparisons and reports
+are available within their wound journey.
 
-1. Open Patients, click Add patient and enter an alias, surgery type/date,
-   wound location and monitoring status. Age is optional.
-2. Open Wound Scans, select the patient, confirm dates/location and browse or
-   drop a JPG/PNG. A local preview appears before submission.
-3. Click Analyse wound. The server decodes and validates the image, loads the
-   existing checkpoints and runs the existing prediction function.
-4. Read AI Analysis and Risk Assessment. A retake means the quality gate
-   rejected the photo; no probability is created. A defer is the existing
-   model's uncertainty band around its decision threshold.
-5. Upload another photo of the same wound/surgery and choose its previous
-   scan. Colour Drift Analysis displays real measurements and their difference.
-6. Use Wound History to compare two saved scans. Reports provides browser
-   printing / Save as PDF and a JSON download of the stored record.
+Healthcare workers see their authorised patient list and recent scans on Home.
+They can search the list, open an assigned patient's profile and review that
+patient's wound journey. **My Profile** for a healthcare worker shows the
+worker's own account details, not a patient record. Only assigned patients are
+listed.
 
-For a technical smoke test, you can use an existing image under
-`data/raw/surgwound/images/train/`. This verifies execution only: those images
-were used in model development and cannot demonstrate clinical performance.
-No dataset images are seeded as patient records.
+History, colour comparisons and reports are integrated into **My Profile (or
+an authorised patient profile) → My Wound Journey → View details**. Each wound
+has a separate timeline. The app uses the model's actual Low/Elevated/Defer/
+Retake outputs and does not invent a Moderate/High three-class classifier.
 
-## What the repository actually contains
+## Existing models
 
-The initial inspection covered root documentation, service, all Python modules,
-model artifacts, result summaries and the nested dataset inventory. The supplied
-WoundAI HTML design reference was not attached; the UI follows the requested
-palette and dashboard structure instead.
-
-| Question | Finding |
+| Component | Implementation |
 | --- | --- |
-| Active classifier | torchvision ResNet-18, two-class head, `models/classifier.pt` |
-| Purpose | Estimate SurgWound Low vs combined Medium+High (Elevated) research labels |
-| Segmenter | Existing DeepLabV3+ with ResNet-18 encoder, `models/segmenter.pt` |
-| Input | RGB photographs, retaining stored orientation, without EXIF rotation |
-| Preprocessing | Existing Pillow bicubic resizing, 224×224 classifier / 256×256 segmenter, ImageNet normalization |
-| Quality gate | Blur variance, clipped pixel fraction, predicted wound-area fraction |
-| Prediction | Existing `predict_image`: retake / defer / ok, optional calibrated Elevated probability, risk band, reasons |
-| Colour | Existing `feature_row`: CIELAB wound/ring means and medians, wound-minus-ring a* |
-| Drift | Subtract corresponding features between linked scans; not classifier input |
+| Active classifier | ResNet-18 with two-class head; `models/classifier.pt` |
+| Classifier target | SurgWound Low vs combined Medium+High (Elevated) research labels |
+| Segmenter | DeepLabV3+ / ResNet-18; `models/segmenter.pt` by default |
+| Input | Stored RGB orientation; no EXIF rotation |
+| Preprocessing | Existing bicubic resizing, 224×224 classifier / 256×256 segmenter; ImageNet normalization |
+| Quality gate | Blur, clipped pixel fraction, predicted wound area |
+| Result | Retake/defer/ok, optional calibrated Elevated probability, risk band, reasons |
+| Colour | Existing CIELAB wound/ring measurements, versioned bounded-resolution extraction |
+| Drift | Differences between matched features of two scans of the same wound |
+| Overlays | Fixed-scale raw a* heatmap; Elevated-logit Grad-CAM |
 | Lighting correction | Not implemented |
-| Backend | Existing FastAPI `/health` and `/predict`, preserved |
-| Prior persistence | None for clinical records; added SQLite plus disk images |
-| Weights | Both active .pt checkpoints and optional ONNX artifacts present; unchanged |
-| Candidate | `classifier_candidate.pt` remains separate and is not promoted |
 
-Model loading, architecture, preprocessing, calibration and thresholding remain
-in the original Python package. The web service calls those functions directly.
-There is no simulated output, new risk threshold or replacement external model.
-Retraining now creates a separate segmenter candidate without changing active
-weights. CIELAB extraction is independent of the classifier quality gate; raw
-measurements on retake photos carry a warning. An empty wound/ring is unavailable.
-Segmentation runs again at bounded resolution for colour feature extraction.
+The browser sends multipart photographs to `/api/scans`. The service reuses
+`predict_image` and the existing colour pipeline, stores actual outputs in
+SQLite, and saves a metadata-free PNG under the private runtime directory.
+The original `/predict` endpoint remains available to signed-in accounts with
+a CSRF header; it does not store uploads. A retake skips classification.
 
-The classifier is not a validated post-surgical infection diagnosis model.
-It does not distinguish Moderate from High. The overview therefore shows
-**Elevated-risk cases**, defined as patients with an elevated latest scan for at
-least one surgery/wound, instead of inventing a High category. No confidence
-score is manufactured. External segmentation performance is poor in the
-existing model card; colour summaries inherit segmentation and lighting errors.
+Colour extraction can still return raw measurements on a retake image with a
+warning, but never substitutes whole-image statistics for an empty wound/ring.
+Heatmaps are not infection maps. Grad-CAM cannot explain a skipped classifier,
+an unverified historical classifier version or an all-zero positive activation.
+Older scans can be re-analysed into a new record while preserving originals.
 
-## Architecture and files
+## Accounts and access
 
-The browser calls same-origin `/api/...` routes with fetch. Multipart uploads
-go to `/api/scans`; the backend calls `predict_image` and `feature_row`, stores
-structured JSON in SQLite, and stores a metadata-free PNG separately. No
-patient information is stored in browser localStorage or sent to third-party
-services. The app uses local SVG icons, system fonts and CSS/SVG charts.
+Patient accounts own one patient record. Clinician accounts access only explicit
+assignments. Checks protect lists, profile updates, wound sites, uploads,
+history, images, comparisons, reanalysis, reviews, notifications and PDFs.
+Patients cannot mark a scan as professionally reviewed or create clinician
+accounts. Assignment changes take effect on subsequent API requests.
 
-New files:
+Passwords use salted PBKDF2-HMAC-SHA256 with 600,000 iterations. Sessions are
+random tokens, stored as hashes in SQLite and sent in HttpOnly/SameSite=Strict
+cookies (Secure under production HTTPS). Writes require a per-session CSRF
+token. Sessions expire after eight hours; password changes revoke all sessions.
+Login/register limits and existing host/origin/body guards are enforced.
+No passwords, session tokens or patient records are stored in localStorage.
 
-- `service/dashboard.py`: patient CRUD, scan workflow, comparisons, review,
-  notifications, image serving and settings.
-- `service/store.py`: SQLite persistence and disk image directory.
-- `service/web/index.html`, `style.css`, `app.js`: responsive ten-page dashboard.
-- `service/test_dashboard.py`: isolated tests with real checkpoint inference.
-- `service/browser_check.py`: optional Chrome end-to-end verification.
-- `service/requirements-dev.txt`: test client dependency.
-- `start.ps1`, `.env.example`, this guide.
+References: [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+and [session-management guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
+These are implemented controls, not a claim of certification or exhaustive
+security review. Self-registration does not verify ownership of an email address;
+administrators must verify identities before linking existing records.
 
-Modified: `service/app.py` (shared validation, router/static mounting, model
-loading lock, threaded prediction, response headers), `service/Dockerfile`
-(include dashboard files), `.gitignore` (exclude runtime records), `README.md`
-(application entry point), `MODEL_CARD.md` (document opt-in scan persistence).
-Active model weights remain unchanged. The segmentation dataset now accepts an
-optional resize interpolation override used by the separate retraining script.
+## Data preservation
 
-## Persistence and settings
+Existing `patients`, `scans` and `events` tables and image files remain in place.
+Additive tables hold users, assignments, sessions, wounds, per-user read markers,
+rate-limit buckets and selected change audits. Legacy patient records start
+unassigned; they are never automatically granted to the first new account.
+Existing scan JSON is interpreted with a stable wound ID derived from patient,
+surgery date and wound location, without a destructive migration.
 
-Records are saved under `runtime/woundwatch.sqlite`; photographs under
-`runtime/images/`. Both are excluded from Git. Back up the database and images
-together with the server stopped. Dates, patient linkage and prior-scan
-ownership are validated server-side. Comparisons require the same patient,
-surgery date, wound location and an earlier/equal scan date. Patient details are
-snapshotted at scan time for reports. A review flag records a local action,
-not an authenticated clinician attestation.
+Default storage: `runtime/woundwatch.sqlite` and `runtime/images/`. Both are
+excluded from Git. Images and reports are served only through authorised API
+routes. New scans append history. Nothing is automatically deleted; the
+organisation must define and administer its retention policy. Back up SQLite
+and images together consistently, with encryption appropriate to the data.
 
-Optional environment variables: `WOUNDWATCH_DATA_DIR`, `MAX_UPLOAD_BYTES`
-(default 10 MiB), `MAX_IMAGE_PIXELS` (default 20 million). `.env` is not loaded
-automatically by start.ps1; use `--env-file .env` with uvicorn if desired.
-Inference runs serially to bound simultaneous model memory use.
-The original `/predict` endpoint still processes without storing uploads.
-Only `/api/scans` creates persistent records.
+## Reports and verification
 
-## Verification
+The protected `/api/scans/{id}/report.pdf` route generates a real downloadable
+PDF with the installed Matplotlib PDF backend. It includes the selected scan's
+photograph, snapshot details, actual output, colour comparison and same-wound
+history. Browser printing is also available. No new runtime dependency is used.
 
-```powershell
-$env:PYTHONPATH = "$PWD\python"
-.\.venv\Scripts\python -m unittest discover -s python\tests -v
-.\.venv\Scripts\python -m unittest service.test_dashboard -v
-.\.venv\Scripts\python -m unittest service.test_security -v
-node --check service/web/app.js
-```
+Automated checks cover existing inference, colour references, real model/API
+parity, patient isolation, clinician assignments, cross-wound rejection,
+session/CSRF behaviour, legacy reanalysis, heatmaps and PDF generation. Chrome
+checks exercise patient and clinician views, upload two real images, generate
+both overlays, download a PDF and check mobile layout/navigation. See the guide
+for exact commands. The integration tests use isolated databases, not your
+private records. GitHub Actions includes these checks for future pushes.
 
-Tests use an isolated temporary database, compare `/predict` and stored scans
-against actual direct checkpoint inference, test retakes, upload rejection,
-patient validation/editing, history persistence, review and notifications.
-They never populate your real workspace with fake records.
+## Incomplete capabilities
 
-Verification completed during implementation: all four existing pipeline tests
-and all five dashboard integration tests passed. An actual repository photograph
-produced probability `0.4200289114489168`, identically through direct inference,
-`/predict`, and the stored-scan workflow. Real CIELAB features were available;
-uploading the same photograph twice produced zero feature drift. Retake and
-error paths were tested separately.
+No clinical diagnostic validation, new accuracy claims, email verification,
+email password recovery, MFA, identity-provider integration, scheduled reminders,
+automated data deletion or tamper-proof clinical audit trail. Cloud/TLS deployment
+and physical Android/iPhone testing remain unverified. The SQLite audit is a
+basic record of selected changes, not a complete access audit.
 
-Chrome desktop (1440 px) and mobile (390 px) checks passed: patient creation,
-two actual model uploads, colour comparison, history, navigation, JSON download
-and PDF rendering, with no browser console or page errors and no mobile page
-overflow. Screenshots and the rendered PDF are in ignored `test-results/`.
-Browser-test records are isolated under `test-results/browser-runtime`, not
-the default `runtime/` workspace. The verification server was stopped afterward.
-
-To repeat browser checks, install `playwright` in the virtual environment, start
-the server with `WOUNDWATCH_DATA_DIR` pointing to a separate test directory,
-then run `.\.venv\Scripts\python service/browser_check.py`. Installed Chrome is
-required. This script creates test records and should not target real records.
-
-## Supported and remaining work
-
-Implemented: responsive navigation, search/filter/add/edit patients, real
-uploads and inference, stored stage outcomes, scan history, side-by-side
-comparison, CIELAB trends, research screening views, notifications from actual
-scan events, local review tracking, print/PDF and JSON reports, settings and
-model health check. All dashboard numbers derive from saved records.
-
-Not implemented: clinical diagnosis, validated infection-free claims,
-lighting correction, patient-disjoint prospective validation, scheduled
-follow-up reminders, multi-user authentication (operator authentication is available), encryption/key management,
-authenticated audit trails, automatic retention/deletion, cloud deployment,
-server-side PDF rendering or background report jobs. The UI labels unsupported
-capabilities. Production deployment requires those privacy/security controls
-and dataset/model licensing review, plus clinical validation appropriate to use.
+The earlier retraining experiment remains documented in DEPLOYMENT.md and its
+aggregate report; it is separate from this UI change. Default model weights are
+preserved. Candidate selection, if explicitly wanted for research, is still
+available through the existing environment setting/launcher switch.

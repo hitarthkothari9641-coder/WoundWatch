@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from service.app import app, models_once
 from service import store
+from service.accounts import create_user
 from woundwatch.inference import predict_image
 from woundwatch.common import read_rgb
 
@@ -21,6 +22,9 @@ class DashboardTests(unittest.TestCase):
         cls.original = store.ROOT
         store.ROOT = Path(cls.temp.name)
         cls.client = TestClient(app)
+        create_user('dashboard-test@example.org','Test clinician','test-only-passphrase-123','clinician')
+        login=cls.client.post('/api/auth/login',json={'email':'dashboard-test@example.org','password':'test-only-passphrase-123'})
+        cls.client.headers['X-CSRF-Token']=login.json()['csrf_token']
         cls.sample = Path('data/raw/surgwound/images/train/02b44effbbf2.jpg')
         cls.patient_body = dict(name='Integration research alias', age=42, surgery_type='Research test',
                                 surgery_date='2026-01-01', wound_location='Test location', monitoring_status='monitoring')
@@ -70,7 +74,7 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(self.client.get('/api/notifications').json())
         self.client.post('/api/notifications/read')
         self.assertTrue(all(n['read'] for n in self.client.get('/api/notifications').json()))
-        with TestClient(app) as reopened:
+        with TestClient(app,cookies=self.client.cookies) as reopened:
             self.assertEqual(len(reopened.get('/api/scans',params={'patient_id':patient['id']}).json()),2)
         print('Actual checkpoint result:', expected, 'Colour features available:', bool(scan['features']))
 

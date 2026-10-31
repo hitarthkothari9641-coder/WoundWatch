@@ -158,8 +158,11 @@ redistribute images or derived weights until permissions are confirmed.
 endpoint processes images in memory without storing uploads. The local dashboard's
 `/api/scans` workflow explicitly persists patient metadata, screening results,
 colour measurements and metadata-free PNG images in the configured local runtime
-directory. This is an unauthenticated localhost research workspace, not a
-production patient-data system. See `WEB_APP.md` for storage and access limitations.
+directory. The patient interface now requires named patient/clinician accounts
+and enforces patient authorization on scans, images, visualizations and reports.
+It remains a research workspace, not a validated clinical patient-data system.
+The interface redesign did not change model algorithms or weights.
+See `PATIENT_GUIDE.md` for account provisioning and access limitations.
 The service does not log image content/filenames and returns generic inference
 errors. Keep reverse-proxy body logging disabled. Monitor aggregate
 service health, latency, quality rejection, delayed consented outcomes, and
