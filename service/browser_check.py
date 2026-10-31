@@ -21,13 +21,28 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.on('response',lambda r:errors.append(f'{r.status}: {r.url}') if r.status>=400 and not(r.status==401 and r.url.endswith('/api/auth/me')) else None)
     page.goto(url)
+    assert page.get_by_role('tab',name='Patient Login').is_visible()
+    assert page.get_by_role('tab',name='Doctor Login').is_visible()
     page.locator('#sign-up-tab').click()
     page.locator('#auth-form [name=name]').fill('Maya Research')
     page.locator('#auth-form [name=email]').fill(email)
     page.locator('#auth-form [name=password]').fill(password)
     page.locator('#auth-form [type=submit]').click()
     page.get_by_role('heading',name='Welcome back, Maya!',exact=True).wait_for()
+    mismatch_context=browser.new_context();mismatch=mismatch_context.new_page();mismatch.goto(url)
+    mismatch.locator('#doctor-login-tab').click()
+    mismatch.locator('#auth-form [name=email]').fill(email);mismatch.locator('#auth-form [name=password]').fill(password)
+    mismatch.locator('#auth-form [type=submit]').click()
+    mismatch.get_by_text('Account type does not match. Choose Patient Login or Doctor Login.').wait_for()
+    assert mismatch.request.get(url+'/api/auth/me').status==401
+    mismatch_context.close()
     assert page.locator('nav a').all_text_contents()==['Home','My Profile','Settings']
+    assert page.locator('.nav-capsule').count()==1 and page.locator('.account-capsule').count()==1
+    assert page.locator('.scan-prompt').count()==1 and page.locator('.latest-update').count()==1
+    assert page.locator('.tips-card').count()==0
+    prompt_width=page.locator('.scan-prompt').bounding_box()['width']
+    dashboard_width=page.locator('.home-feature-grid').bounding_box()['width']
+    assert .35<prompt_width/dashboard_width<.42,'Compact scan card should use about 35–40% of the dashboard width'
     page.screenshot(path='test-results/patient-home-empty.png',full_page=True)
     page.locator('nav a[href="#profile"]').click()
     page.locator('#add-wound').click()
@@ -98,9 +113,20 @@ with sync_playwright() as p:
     # Separate browser context proves that role choice follows server identity.
     doctor_context=browser.new_context(viewport={'width':1440,'height':1000});doc=doctor_context.new_page()
     doc.on('pageerror',lambda e:errors.append(str(e)));doc.goto(url)
+    doc.locator('#doctor-login-tab').click()
     doc.locator('#auth-form [name=email]').fill(clinician_email);doc.locator('#auth-form [name=password]').fill(password)
     doc.locator('#auth-form [type=submit]').click()
     doc.get_by_role('heading',name='Welcome, Dr Research',exact=True).wait_for()
+    assert doc.locator('.doctor-stats .stat').count()==4
+    assert doc.locator('#patient-risk').count()==1 and doc.locator('#patient-sort').count()==1
+    doctor_scans=doc.request.get(url+'/api/scans').json()
+    risk_value='retake' if doctor_scans[0]['result']['status']=='retake' else doctor_scans[0]['result']['risk_band']
+    doc.locator('#patient-risk').select_option(risk_value)
+    assert doc.locator('.patient-card').count()==1
+    doc.locator('#patient-status').select_option('monitoring')
+    doc.locator('#patient-sort').select_option('oldest')
+    doc.locator('#patient-risk').select_option('')
+    doc.screenshot(path='test-results/doctor-home-dashboard.png',full_page=True)
     doc.locator('[data-patient]').first.click()
     doc.get_by_role('heading',name='Maya Research',exact=True).wait_for()
     doc.screenshot(path='test-results/clinician-profile.png',full_page=True)
@@ -110,13 +136,21 @@ with sync_playwright() as p:
     assert doc.locator('.account-profile').inner_text().find('Dr Research')>=0
     assert doc.locator('#wound-journey').count()==0
     doc.locator('nav a[href="#home"]').click()
+    doc.locator('.scan-card [data-open-scan]').first.click()
+    doc.locator('#doctor-review-form').wait_for()
+    doc.locator('#doctor-review-form [name=outcome]').select_option('follow_up')
+    doc.locator('#doctor-review-form [name=notes]').fill('Browser test clinician note')
+    doc.locator('#doctor-review-form [type=submit]').click()
+    doc.get_by_text('Human review saved. AI screening was not changed.',exact=True).wait_for()
+    assert doc.locator('.review-record').inner_text().find('Browser test clinician note')>=0
+    doc.locator('nav a[href="#home"]').click()
     doc.locator('#patient-search').fill('no matching patient')
     assert doc.locator('[data-patient]').count()==0
     doc.locator('#patient-search').fill('Maya')
     assert doc.locator('[data-patient]').count()==1
     page.set_viewport_size({'width':1440,'height':1050});page.locator('#logout').click()
-    page.get_by_role('heading',name='Good to see you',exact=True).wait_for()
+    page.get_by_role('heading',name='Patient login',exact=True).wait_for()
     assert page.request.get(url+'/api/patients').status==401
     assert not errors,errors
-    print('PASS: patient registration/login, wound setup, two actual scans, per-wound timeline, both overlays, PDF download, mobile navigation, assigned clinician view and logout')
+    print('PASS: patient registration/login, separate doctor login, two-island header, compact patient dashboard, wound setup, two actual scans, per-wound timeline, both overlays, PDF download, doctor metrics/filters/review notes, mobile navigation, assigned clinician view and logout')
     browser.close()

@@ -247,12 +247,20 @@ def visualization(identifier: str,kind: Literal['colour','gradcam']):
 
 class Review(BaseModel):
     status: Literal['pending', 'reviewed']
+    outcome: Literal['no_additional_action', 'follow_up', 'urgent_follow_up', 'unable_to_assess'] | None = None
+    notes: str = Field(default='', max_length=2000)
 
 @router.patch('/scans/{identifier}/review')
 def review(identifier: str, body: Review):
     user=clinician()
     scan = required('scans', identifier)
-    scan.update(review_status=body.status, reviewed_at=now() if body.status == 'reviewed' else None,reviewed_by=user['id'])
+    reviewed_at=now() if body.status == 'reviewed' else None
+    review_entry={'status':body.status,'reviewed_at':reviewed_at,'reviewed_by':user['id'],
+                  'outcome':body.outcome if body.status=='reviewed' else None,'notes':body.notes.strip() if body.status=='reviewed' else ''}
+    history=scan.setdefault('review_history',[])
+    history.append(review_entry)
+    scan.update(review_status=body.status, reviewed_at=reviewed_at, reviewed_by=user['id'],
+                review_outcome=review_entry['outcome'],review_notes=review_entry['notes'])
     with store.connection() as db:
         db.execute('UPDATE scans SET payload=? WHERE id=?', (json.dumps(scan), identifier))
         audit(db,'scan_reviewed',identifier)

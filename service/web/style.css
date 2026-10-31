@@ -9,3 +9,55 @@
 @media(max-width:420px){.app-header{padding:12px 14px;column-gap:8px}.app-header .brand{font-size:18px;gap:6px}.app-header .brand-mark{width:30px;height:34px;font-size:24px}.account-label{font-size:9px;max-width:49px}.header-right{gap:0}.header-right .avatar{width:32px;height:32px;font-size:11px}.nav-capsule{width:100%;max-width:340px;gap:3px;padding:5px}.nav-capsule a{flex:1;padding:11px 10px;font-size:12px;gap:6px}.shell>main{padding:24px 16px 90px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 @media print{.app-header,footer,.mobile-scan,.page-heading,.tabs,.toolbar,.button,.text-button,#toast,.icon-button{display:none!important}.shell>main{padding:0}.card{box-shadow:none;break-inside:avoid;margin-bottom:18px}.grid{display:block}.print-report{display:block}.scan-photo{max-height:240px}.scan-detail{border:0}.visual-details{display:none}body{background:#fff}.section,.profile-info{display:none}}
+
+/* Keep the primary and account Dynamic Islands visually distinct. */
+.app-header{grid-template-columns:minmax(190px,1fr) auto auto}
+.account-capsule{justify-self:end;display:flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #fff;border-radius:999px;background:rgba(255,255,255,.9);box-shadow:0 8px 28px #193b4810,0 2px 5px #193b4808;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);white-space:nowrap}
+.account-link{display:flex;align-items:center;gap:9px;min-height:44px;padding:4px 8px;border-radius:999px;color:var(--navy);transition:background .18s ease,transform .18s ease}
+.account-link:hover{background:#edf7f2;transform:translateY(-1px)}
+.account-label{max-width:none;padding:0;border:0;color:var(--navy);font-size:13px;font-weight:600}
+.account-link .avatar{width:34px;height:34px}
+.sign-out{gap:7px;min-height:42px;padding:0 10px;border-radius:999px;font-size:13px;transition:background .18s ease,color .18s ease}
+.sign-out:hover{background:#fcebe6;color:#923f32}
+.notification-count{position:absolute;top:2px;right:0;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;border:2px solid white;border-radius:999px;background:#b54d39;color:white;font-size:10px;font-weight:700;line-height:1}
+.home-feature-grid{display:grid;grid-template-columns:minmax(280px,.62fr) minmax(0,1fr);gap:22px;align-items:stretch;margin-bottom:28px}
+.home-feature-grid .card{margin:0}
+.scan-prompt{display:flex;align-self:start;align-items:center;justify-content:space-between;gap:12px;min-height:235px;padding:28px;background:linear-gradient(145deg,#e6f4ed,#f2faf6);border-color:#d3e8dd}
+.scan-prompt-copy{min-width:0}
+.scan-prompt h2{margin:13px 0 23px;font-size:26px;line-height:1.28}
+.scan-prompt-art{display:grid;place-items:center;flex:0 0 78px;width:78px;height:78px;border:1px solid #c5e1d3;border-radius:24px;background:#ffffffb8;color:#4b9b84}
+.scan-prompt-art .icon{width:44px;height:44px}
+.latest-update{min-width:0}
+.latest-update .details{margin:11px 0}
+.latest-update .details>div{padding:8px 0}
+.latest-result{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.risk-category{font-size:14px;font-weight:600;color:var(--navy)}
+.latest-update .status-explanation{margin:10px 0}
+.stats.doctor-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.patient-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 22px}
+.patient-filters label{margin:0}
+.patient-cards .details>div{gap:12px}
+.patient-card .details dd{max-width:60%}
+.doctor-review{margin:24px 0;background:#f8fbfa;border-color:#cdded9}
+.doctor-review h3{margin:7px 0}
+.doctor-review .review-record{margin:16px 0;padding:16px;border-left:3px solid var(--teal);border-radius:8px;background:#edf7f2}
+.doctor-review .review-record p{margin:8px 0}
+.doctor-review small,.review-history small{color:var(--muted)}
+.doctor-review textarea{width:100%;resize:vertical;border:1px solid #bfcfcb;border-radius:8px;padding:12px;color:var(--navy);font:inherit}
+.doctor-review .review-history{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.review-history article{padding:13px 0;border-bottom:1px solid var(--line)}
+.review-history article p{margin:6px 0}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;border-radius:14px;background:#eef5f2}
+.auth-tabs button{min-height:46px;padding:10px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-weight:600}
+.auth-tabs button.active{background:#fff;color:var(--teal);box-shadow:0 2px 9px #193b4810}
+.auth-register{width:100%;margin:11px 0 18px;padding:7px;border:0;background:transparent;color:var(--teal);font-weight:600}
+@media(max-width:1150px){.app-header{grid-template-columns:minmax(160px,1fr) auto auto}.account-capsule{gap:3px;padding:5px}.account-link{gap:6px;padding:4px}.sign-out{padding:0 7px}.account-label{font-size:12px}.home-feature-grid{grid-template-columns:minmax(260px,.62fr) minmax(0,1fr)}}
+@media(max-width:850px){.app-header{grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:12px;padding:14px 20px;min-height:142px}.nav-capsule{grid-row:2;grid-column:1/-1;justify-self:center}.account-capsule{grid-row:1;grid-column:2}.home-feature-grid{grid-template-columns:minmax(0,.7fr) minmax(0,1fr)}.scan-prompt{min-height:250px;padding:22px}.scan-prompt-art{flex-basis:58px;width:58px;height:58px}.stats.doctor-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.patient-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.scan-detail,#patient-management{scroll-margin-top:165px}}
+@media(max-width:600px){.home-feature-grid{grid-template-columns:1fr}.scan-prompt{min-height:190px}.scan-prompt h2{font-size:24px;margin-bottom:16px}.latest-update .details>div{align-items:flex-start}.latest-update .details dd{max-width:56%}.patient-filters{grid-template-columns:1fr}.doctor-stats{gap:12px}.doctor-stats .card{padding:18px}.doctor-stats .stat strong{font-size:32px}.account-capsule{gap:1px}.account-label{display:none}.account-link .avatar{width:32px;height:32px}.sign-out span{display:none}.sign-out{min-width:38px;padding:0}.notification-popover{position:fixed;top:72px;right:12px;max-height:calc(100dvh - 100px)}}
+@media(max-width:420px){.app-header{padding:12px 14px;column-gap:8px}.account-capsule{padding:3px}.app-header .brand{font-size:18px;gap:6px}.app-header .brand-mark{width:30px;height:34px;font-size:24px}.nav-capsule{width:100%;max-width:340px;gap:3px;padding:5px}.nav-capsule a{flex:1;padding:11px 10px;font-size:12px;gap:6px}.shell>main{padding:24px 16px 90px}.scan-prompt{padding:19px}.scan-prompt-art{display:none}}
+.sign-out span{display:inline}
+.latest-scan-image{float:right;width:112px;height:90px;object-fit:contain;margin:4px 0 8px 14px;border:1px solid var(--line);border-radius:10px;background:#edf3f0}
+.doctor-review .button{margin-top:5px}
+.badge.elevated{background:#fff3dc;color:#86621d}
+.review-outcome.urgent{display:inline-flex;padding:5px 8px;border-radius:6px;background:#fce6e2;color:#963c31}
+@media(max-width:600px){.sign-out span{display:none}}
