@@ -11,9 +11,13 @@ def configuration():
     production=mode=='production'
     username=os.getenv('WOUNDWATCH_USERNAME','')
     password=os.getenv('WOUNDWATCH_PASSWORD','')
-    hosts=[h.strip() for h in os.getenv('WOUNDWATCH_ALLOWED_HOSTS','localhost,127.0.0.1,::1,testserver').split(',') if h.strip()]
-    if production and (not os.getenv('WOUNDWATCH_ALLOWED_HOSTS') or '*' in hosts):
-        raise RuntimeError('Production requires explicit allowed hosts')
+    configured_hosts=[h.strip() for h in os.getenv('WOUNDWATCH_ALLOWED_HOSTS','').split(',') if h.strip()]
+    render_host=os.getenv('RENDER_EXTERNAL_HOSTNAME','').strip()
+    hosts=configured_hosts + ([render_host] if render_host else [])
+    if not production:
+        hosts += ['localhost','127.0.0.1','::1','testserver']
+    if production and (not hosts or '*' in hosts):
+        raise RuntimeError('Production requires explicit hosts or Render external hostname; wildcards are not allowed')
     if bool(username)!=bool(password): raise RuntimeError('Set both WOUNDWATCH_USERNAME and WOUNDWATCH_PASSWORD')
     return production,username,password,hosts
 
@@ -30,7 +34,10 @@ class SecurityMiddleware:
         try: hostname=urlsplit('//'+host).hostname
         except ValueError: return await reject(400,'Invalid host')
         if hostname not in hosts: return await reject(400,'Host not allowed')
-        if production and scope.get('scheme')!='https': return await reject(400,'HTTPS is required')
+        # Render terminates TLS at its edge. Its internal health probe can use
+        # HTTP, so keep only the non-sensitive liveness path available there.
+        if production and scope.get('scheme')!='https' and scope['path']!='/live':
+            return await reject(400,'HTTPS is required')
         if scope['path']!='/live' and username:
             valid=False
             try:
