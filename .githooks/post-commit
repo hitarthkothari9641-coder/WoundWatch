@@ -1,0 +1,4 @@
+#!/bin/sh
+# Push a commit immediately after it is created in this working copy.
+# Uncommitted edits are never staged or uploaded by this hook.
+git push origin HEAD

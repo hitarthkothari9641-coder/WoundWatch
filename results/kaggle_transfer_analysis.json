@@ -1,0 +1,105 @@
+{
+  "protocol": "Same stratified image-level folds on supplied SurgWound train+val only; no patient IDs; supplied test split not evaluated by this script",
+  "kaggle_auxiliary_pretraining": {
+    "task": "10-class wound type; not infection",
+    "source_image_count": 1470,
+    "mirrored_duplicate_images_excluded": 1470,
+    "class_counts_after_mirror_exclusion": {
+      "Abrasions": 82,
+      "Bruises": 121,
+      "Burns": 67,
+      "Cut": 50,
+      "Diabetic Wounds": 231,
+      "Laseration": 61,
+      "Normal": 100,
+      "Pressure Wounds": 301,
+      "Surgical Wounds": 210,
+      "Venous Wounds": 247
+    },
+    "class_names": [
+      "Abrasions",
+      "Bruises",
+      "Burns",
+      "Cut",
+      "Diabetic Wounds",
+      "Laseration",
+      "Normal",
+      "Pressure Wounds",
+      "Surgical Wounds",
+      "Venous Wounds"
+    ],
+    "pretrain_epochs": 6
+  },
+  "surgwound_development": {
+    "n": 549,
+    "elevated_n": 93,
+    "finetune_epochs": 5,
+    "folds": 5
+  },
+  "imagenet": {
+    "n": 549,
+    "elevated_n": 93,
+    "elevated_prevalence": 0.16939890710382513,
+    "auroc": 0.7247453310696095,
+    "auprc": 0.427996339065223,
+    "calibrated_brier": 0.12342104163434083,
+    "youden_threshold_calibrated": 0.18628192345745745,
+    "youden_sensitivity": 0.6129032258064516,
+    "youden_specificity": 0.7192982456140351,
+    "youden_accuracy": 0.7012750455373407,
+    "youden_confusion_tn_fp_fn_tp": [
+      328,
+      128,
+      36,
+      57
+    ],
+    "auroc_image_bootstrap_95ci": [
+      0.6663094227504245,
+      0.7820705998868139
+    ],
+    "auprc_image_bootstrap_95ci": [
+      0.34254321741656707,
+      0.5315385494657324
+    ]
+  },
+  "kaggle": {
+    "n": 549,
+    "elevated_n": 93,
+    "elevated_prevalence": 0.16939890710382513,
+    "auroc": 0.6949396340313149,
+    "auprc": 0.4380913633666304,
+    "calibrated_brier": 0.1271255245891254,
+    "youden_threshold_calibrated": 0.27245779571066375,
+    "youden_sensitivity": 0.43010752688172044,
+    "youden_specificity": 0.8903508771929824,
+    "youden_accuracy": 0.8123861566484517,
+    "youden_confusion_tn_fp_fn_tp": [
+      406,
+      50,
+      53,
+      40
+    ],
+    "auroc_image_bootstrap_95ci": [
+      0.6301806262969251,
+      0.756239388794567
+    ],
+    "auprc_image_bootstrap_95ci": [
+      0.3496215087701516,
+      0.5345551408973659
+    ]
+  },
+  "comparison": {
+    "delta_kaggle_minus_imagenet_auroc": -0.02980569703829461,
+    "delta_kaggle_minus_imagenet_auprc": 0.010095024301407407,
+    "interpretation": "Exploratory model-selection comparison; image-level OOF and two candidates were compared on these folds, so this is not a final unbiased estimate.",
+    "bootstrap_method": "2000 stratified image bootstrap replicates over pooled OOF rows; not patient-clustered and does not include model-training variance"
+  },
+  "limits": [
+    "No patient IDs; image-level folds may contain related wound images.",
+    "Kaggle wound-type labels are not infection outcomes and were used only for auxiliary pretraining.",
+    "Kaggle mirror files were excluded by matching mirrored_ filenames to originals; source permissions remain to be verified.",
+    "The supplied test split was not used in this experiment; it should remain locked for a new independent evaluation protocol.",
+    "Grad-CAM maps are model sensitivity visualizations, not explanations or clinical evidence."
+  ],
+  "selected_by_development_oof_auroc": "imagenet"
+}

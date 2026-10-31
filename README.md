@@ -62,6 +62,19 @@ candidate and does not replace `models/classifier.pt` used by the service. The
 test split is image-level and has no patient IDs; do not describe it as
 patient-independent or use it repeatedly to tune models.
 
+An auxiliary wound-type transfer experiment is also available:
+
+```powershell
+python -m woundwatch.kaggle_transfer --pretrain-epochs 6 --finetune-epochs 5 --folds 5
+```
+
+It removes the Kaggle archive's `mirrored_*` copies, pretrains a 10-class
+wound-type model, then compares ImageNet versus Kaggle initialization on the
+same SurgWound train+val folds. Kaggle wound types are not infection labels.
+It creates OOF analysis, geometric augmentation previews, and before/after
+Grad-CAM overlays. It does not access the supplied test split. Review
+`PRODUCTION_READINESS.md` before considering any deployment.
+
 Segmentation is a DeepLabV3+ decoder with a ResNet-18 encoder, trained on
 FUSeg masks using cross-entropy plus Dice loss. Masks with any positive value
 (including 1 and 255) are treated as wound. It reports FUSeg validation and
@@ -113,8 +126,8 @@ python -m woundwatch.color_features visits.csv
 python -m woundwatch.test_erythema
 ```
 
-The Kaggle and Medetec folders are used for audit only. No cross-dataset
-infection-label pretraining is inferred from wound-type class names. Dataset,
-checkpoint, and results files are tracked in this repository; review the data
-licenses and redistribution terms before sharing or using them outside this
-research project.
+The Kaggle folder is also used for the auxiliary wound-type transfer experiment
+documented in `results/KAGGLE_TRANSFER_REPORT.md`; its wound-type labels are not
+infection labels. Dataset licenses and redistribution rights remain unverified.
+Do not redistribute Kaggle-derived weights, panels, or images until permissions
+are confirmed.

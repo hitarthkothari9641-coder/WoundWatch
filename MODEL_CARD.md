@@ -20,8 +20,10 @@ optional ONNX exports are provided for experimentation.
   cannot be excluded across folds.
 - FUSeg: foot-ulcer images and masks for segmentation training/validation.
 - Medetec FUSeg test split: external segmentation evaluation.
-- Kaggle Wound and Medetec folders: data audit only; class names are not
-  interpreted as infection labels.
+- Kaggle Wound: used only for an auxiliary 10-class wound-type pretraining
+  experiment; its labels are not interpreted as infection labels. Other
+  Medetec folders remain data-audit only apart from the FUSeg segmentation
+  test noted below.
 - DFUC2021: present locally, but not automatically used. Its label semantics
   differ from SurgWound; cross-dataset infection pretraining is not implemented
   in this Python conversion.
@@ -30,7 +32,9 @@ Initial file audit covered 4,220 images: SurgWound 686, Kaggle 2,940, and
 Medetec 594. It found no unreadable files, exact-duplicate rows 0/2/2
 respectively, and average-hash near-match rows (Hamming distance <=6) 178 / 1,018
 / 205. Near matches need visual review; they were not automatically removed
-from classifier folds.
+from the original classifier folds. The Kaggle archive also has 1,470
+`mirrored_*` files with matching original filenames; the transfer script
+excludes these mirrored copies from auxiliary pretraining.
 
 The classifier uses ImageNet-pretrained torchvision ResNet-18 weights if
 available, weighted cross-entropy, geometric augmentation only, and a final
@@ -59,6 +63,25 @@ These are exploratory image-level CV results, not clinical performance
 claims. They must not be interpreted as unseen-patient performance: patient IDs
 are unavailable and the split was at image level. Metrics are saved to
 `results/cv_results.csv` and embedded in `models/classifier.pt`.
+
+### Kaggle wound-type pretraining comparison
+
+An auxiliary 10-class wound-type model was trained on 1,470 Kaggle originals;
+1,470 filename-paired `mirrored_*` copies were excluded. Kaggle class names are
+not infection labels. On matched, stratified image-level folds over only the
+549 SurgWound train+validation images (93 Elevated), ImageNet initialization
+scored AUROC 0.725 (95% stratified image-bootstrap CI 0.666-0.782), AUPRC 0.428
+(0.343-0.532), and calibrated Brier 0.123. Kaggle wound-type initialization
+scored AUROC 0.695 (0.630-0.756), AUPRC 0.438 (0.350-0.535), and Brier 0.127.
+The AUPRC baseline prevalence was 0.169. The small AUPRC increase does not
+offset lower AUROC and worse Brier score; the ImageNet initialization was
+selected for the local research candidate. Bootstrap intervals resample images
+and do not account for patient clusters or model-training variation. The
+supplied test partition was not used in this experiment.
+
+See `results/KAGGLE_TRANSFER_REPORT.md` for the protocol, thresholds, images,
+and limitations. Kaggle dataset rights are not confirmed, so the Kaggle-derived
+checkpoint and image panels remain local pending license review.
 
 ### Separate held-out-split classifier candidate
 
