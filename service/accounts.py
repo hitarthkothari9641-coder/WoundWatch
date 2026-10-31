@@ -9,6 +9,7 @@ import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
+from typing import Literal
 from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -110,6 +111,9 @@ class Registration(Credentials):
         if not value.strip(): raise ValueError('Enter your name')
         return value.strip()
 
+class LoginCredentials(Credentials):
+    account_type: Literal['patient','clinician'] | None = None
+
 @router.post('/register',status_code=201)
 def register(body:Registration,request:Request,response:Response):
     throttle('register:'+(request.client.host if request.client else 'local'))
@@ -118,7 +122,7 @@ def register(body:Registration,request:Request,response:Response):
     return new_session(user,response)
 
 @router.post('/login')
-def login(body:Credentials,request:Request,response:Response):
+def login(body:LoginCredentials,request:Request,response:Response):
     throttle('login-ip:'+(request.client.host if request.client else 'local'))
     throttle('login-account:'+body.email)
     with store.connection() as db:
@@ -126,6 +130,7 @@ def login(body:Credentials,request:Request,response:Response):
     encoded=row['password_hash'] if row else 'pbkdf2_sha256$600000$'+'00'*16+'$'+'00'*32
     valid=check_password(body.password,encoded)
     if not valid or not row or not row['active']: raise HTTPException(401,'Email or password is incorrect')
+    if body.account_type and row['role']!=body.account_type: raise HTTPException(401,'Account type does not match. Choose Patient Login or Doctor Login.')
     return new_session(public_user(row),response)
 
 @router.get('/me')

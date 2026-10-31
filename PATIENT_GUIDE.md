@@ -129,14 +129,21 @@ Revoke that assignment:
 .\.venv\Scripts\python -m service.manage unassign --email doctor@example.org --patient-id P-REPLACE
 ```
 
-Clinicians sign in at the same sign-in page. Their role comes from the database,
-not a frontend toggle. Both roles use **Home, My Profile, Settings** in the
-navigation capsule; notifications open from the header bell. The clinician Home
-screen contains the assigned-patient list, search and recent scans. Selecting
-an authorised patient opens their complete profile/timeline. A clinician's
-**My Profile** shows their own account details. Creating a new patient record
-assigns it to that clinician; the administrator separately creates its patient
-login.
+Clinicians sign in using **Doctor Login** on the shared sign-in page. Their role
+comes from the database, not the login selector; a mismatch is rejected and
+does not leave an active session. Both roles use **Home, My Profile, Settings**
+in the navigation capsule, with notifications, account profile and sign-out in
+a separate header capsule. The clinician Home screen contains summary counts,
+a review queue, recent scans, and patient management with search, risk and
+monitoring filters, and latest-scan sorting. Selecting an authorised patient
+opens their complete profile/timeline. A clinician's **My Profile** shows their
+own account details. Creating a new patient record assigns it to that clinician;
+the administrator separately creates its patient login.
+
+On a scan, clinicians can record one of the explicit human-review outcomes and
+optional clinical notes, then mark the record reviewed. Entries include the
+reviewer account and time and are retained as history. These are clinician
+entries, not model output; they do not alter the AI screening result.
 
 Use `WOUNDWATCH_DATA_DIR` consistently if your data directory is not the default
 `runtime`. Administrator commands must target the same database as the server.
@@ -174,6 +181,7 @@ define consent, retention, recovery and deletion procedures before clinical use.
 
 - Register two patients; each should see only their own profile, wounds and scans.
 - Log in as an unassigned clinician; the patient list should be empty.
+- Choose the wrong account type at login; verify no active session is retained.
 - Assign one patient; only that patient's records become available.
 - Try another patient's image/report URL: the server must deny it (404).
 - Add two different wounds; their timelines and comparisons must remain separate.
@@ -182,9 +190,13 @@ define consent, retention, recovery and deletion procedures before clinical use.
 - Generate both maps for a quality-accepted scan; use saved-image reanalysis for
   older unversioned scans.
 - Link a previous scan, recalculate colours, download and open the PDF.
+- Record a clinician review outcome and notes; verify they remain distinct from
+  the AI result and that unauthorized users cannot write reviews.
 - Sign out, then try a private API URL: expect 401.
-- Test narrow screens, keyboard navigation, the navigation capsule, header
-  notification popover and persistent mobile scan action.
+- Check both header capsules, compact scan/latest-update cards and removal of
+  the Home photo-help card.
+- Test narrow screens, keyboard navigation, notification popover and
+  persistent mobile scan action.
 
 Automated checks:
 
@@ -221,7 +233,8 @@ Created in this redesign:
 - `service/manage.py`: trusted-host clinician provisioning, patient linking,
   assignment/revocation and password reset commands.
 - `service/monitoring.py`: permitted profile edits, separate wounds and private PDF reports.
-- `service/web/views.js`: patient/clinician page rendering and interactions.
+- `service/web/views.js`: patient/clinician dashboard, filters, timeline and
+  human-review interface.
 - `service/test_accounts.py`: isolation, sessions, roles, wounds, legacy image
   reanalysis and PDF tests.
 - `PATIENT_GUIDE.md`: this walkthrough and file inventory.
@@ -231,9 +244,9 @@ Modified:
 - `service/app.py`, `dashboard.py`, `security.py`, `store.py`: authenticated
   routes, ownership checks, additive storage, per-user notifications,
   reanalysis of saved images and role-restricted healthcare reviews.
-- `service/web/index.html`, `app.js`, `style.css`, `visualizations.js`: shared
-  navigation capsule, header notifications, home/profile/timeline, real login,
-  image upload and integrated map/report controls.
+- `service/web/index.html`, `app.js`, `style.css`, `visualizations.js`: dual
+  navigation capsules, role-specific sign-in, patient/doctor Home, profile and
+  timeline, image upload and integrated map/report controls.
 - `service/test_dashboard.py`, `test_security.py`, `test_parity.py`,
   `browser_check.py`: adapt existing checks to real accounts and new navigation.
 - `.github/workflows/checks.yml`, `.env.example`, `README.md`, `WEB_APP.md`,

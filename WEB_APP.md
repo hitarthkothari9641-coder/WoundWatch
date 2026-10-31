@@ -19,24 +19,29 @@ Open http://127.0.0.1:8000. Stop an old server with Ctrl+C first. If you see a
 backend-version warning or missing visualization routes, restart the Python
 server and refresh the browser with Ctrl+Shift+R.
 
-Patient registration creates a new private patient record. Clinician accounts
-and links to existing patient records require the administrator commands in
-PATIENT_GUIDE.md. There is no default password and no fake role selector.
+Patient registration creates a new private patient record. Choose **Patient
+Login** or **Doctor Login**; the selected account type is checked by the login
+API before a session is issued. Doctor accounts and links to existing patient
+records require the administrator commands in PATIENT_GUIDE.md. There is no
+default password.
 
 ## Navigation
 
-Both patients and healthcare workers use the same compact **Home / My Profile /
-Settings** navigation capsule. Notifications are available from the header
-bell, rather than a separate page. Patients can start a scan from the Home
-screen's prominent **Scan My Wound** action or the persistent mobile action.
-Their AI analysis, risk status, scan history, colour comparisons and reports
-are available within their wound journey.
+The header contains two separate floating capsules: **Home / My Profile /
+Settings** and the account controls for notifications, account profile and
+sign-out. The bell shows the unread count. Patients see a compact scan card
+beside their latest saved scan and actual screening status; there is no
+additional photo-help card on Home. Patients can also start a scan from the
+persistent mobile action. AI analysis, risk status, scan history, colour
+comparisons and reports remain within the wound journey.
 
-Healthcare workers see their authorised patient list and recent scans on Home.
-They can search the list, open an assigned patient's profile and review that
-patient's wound journey. **My Profile** for a healthcare worker shows the
-worker's own account details, not a patient record. Only assigned patients are
-listed.
+Healthcare workers see summary counts, a human-review queue, recent patient
+activity, and patient management on Home. Patient management supports name/ID
+search, risk and monitoring filters, and latest-scan sorting. A scan review
+stores a doctor-entered outcome, optional notes, reviewer and timestamp in that
+scan's history; it does not change the AI result. **My Profile** for a
+healthcare worker shows the worker's own account details, not a patient record.
+Only assigned patients are listed.
 
 History, colour comparisons and reports are integrated into **My Profile (or
 an authorised patient profile) → My Wound Journey → View details**. Each wound
@@ -118,9 +123,10 @@ Automated checks cover existing inference, colour references, real model/API
 parity, patient isolation, clinician assignments, cross-wound rejection,
 session/CSRF behaviour, legacy reanalysis, heatmaps and PDF generation. Chrome
 checks exercise patient and clinician views, upload two real images, generate
-both overlays, download a PDF and check mobile layout/navigation. See the guide
-for exact commands. The integration tests use isolated databases, not your
-private records. GitHub Actions includes these checks for future pushes.
+both overlays, download a PDF, record doctor review notes, and check mobile
+layout/navigation. See the guide for exact commands. The integration tests use
+isolated databases, not your private records. GitHub Actions includes the
+backend and syntax checks for future pushes.
 
 ## Incomplete capabilities
 
