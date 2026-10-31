@@ -1,4 +1,4 @@
-param([switch]$UseRetrainedSegmenter)
+param([switch]$UseRetrainedSegmenter, [switch]$KaggleDemo)
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 $env:PYTHONPATH = Join-Path $PSScriptRoot 'python'
@@ -23,4 +23,13 @@ if ($UseRetrainedSegmenter) {
     if (-not (Test-Path -LiteralPath $candidatePath)) { throw 'Run the documented retraining experiment before selecting its candidate.' }
     $env:WOUNDWATCH_SEGMENTER_PATH = $candidatePath
 }
-& $pythonExe -m uvicorn service.app:app --host 127.0.0.1 --port 8000 --no-access-log
+$port = 8000
+if ($KaggleDemo) {
+    $demoRuntime = Join-Path $PSScriptRoot 'runtime\kaggle-demo-ready'
+    if (-not (Test-Path -LiteralPath (Join-Path $demoRuntime 'woundwatch.sqlite'))) {
+        throw 'Create the local demo first: python -m service.seed_kaggle_demo'
+    }
+    $env:WOUNDWATCH_DATA_DIR = $demoRuntime
+    $port = 8001
+}
+& $pythonExe -m uvicorn service.app:app --host 127.0.0.1 --port $port --no-access-log

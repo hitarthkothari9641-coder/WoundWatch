@@ -149,8 +149,7 @@ def create_scan(file: UploadFile = File(...), patient_id: str = Form(...),
         try:
             image.save(path, format='PNG')  # Re-encode without EXIF or original filename.
             db.execute('INSERT INTO scans VALUES(?,?,?)', (identifier, patient_id, json.dumps(scan, allow_nan=False)))
-            message = 'Scan stored · ' + result['status']
-            if result['risk_band'] == 'elevated': message += ' · elevated screening result for clinical review'
+            message = 'AI report awaiting healthcare review · ' + result['status']
             event = dict(id=uuid4().hex, scan_id=identifier, created_at=now(), message=message, read=False)
             db.execute('INSERT INTO events VALUES(?,?)', (event['id'], json.dumps(event)))
             audit(db,'scan_created',identifier)

@@ -131,3 +131,33 @@ documented in `results/KAGGLE_TRANSFER_REPORT.md`; its wound-type labels are not
 infection labels. Dataset licenses and redistribution rights remain unverified.
 Do not redistribute Kaggle-derived weights, panels, or images until permissions
 are confirmed.
+
+## Local Kaggle category review demo
+
+This optional demo creates ten synthetic patient accounts (one representative
+original image per Kaggle wound-type category) and two synthetic clinician
+accounts. It never treats wound-type categories as infection outcomes: demo
+reports withhold the infection probability, are marked as demos, and enter both
+clinicians' pending review queues. “Reviewed” records that a clinician opened
+the report; it does not approve a diagnosis. Examples are separate category
+samples, not longitudinal photos of the same wound. Kaggle licensing is
+unverified, so generated imagery and reports stay local.
+
+From the project root, initialize the isolated demo database and accounts, then
+start it on port 8001 (separate from the regular app on 8000):
+
+```powershell
+python -m service.seed_kaggle_demo
+.\start.ps1 -KaggleDemo
+```
+
+Open `http://127.0.0.1:8001`. Random credentials are written once to
+`%LOCALAPPDATA%\WoundWatch\kaggle-demo-accounts.csv`; keep this file private.
+The public repository contains only `kaggle-demo-accounts.example.csv`, a
+redacted format example; passwords are intentionally excluded from GitHub.
+The demo database, sample images, per-report visualizations and PDF reports are
+stored under ignored `runtime\kaggle-demo-ready`. The cross-category analysis PDF,
+PNG and CSV are in `runtime\kaggle-demo-ready\reports`. The workflow includes a
+colour heatmap and Grad-CAM visualization where available. These visualizations
+are not diagnostic explanations. Remove the demo by stopping its server and
+deleting only the `runtime\kaggle-demo-ready` folder and local credentials file.
