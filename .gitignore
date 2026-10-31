@@ -1,11 +1,9 @@
-# Local datasets and derived outputs are not part of the source repository.
-/data/
-/models/
-/results/
-/.dist/
-/woundwatch_risk_pipeline.m
+# MATLAB source files stay local and are not published.
+*.m
+/code/
 
-# Python and MATLAB local artifacts.
+# Local runtime and build artifacts.
+/.dist/
 __pycache__/
 *.py[cod]
 .venv/
@@ -13,14 +11,10 @@ venv/
 .env
 .env.*
 !.env.example
-*.mat
-*.onnx
 *.asv
 *.mex*
 *.slxc
 *.mlappinstall
 *.mltbx
 *.log
-*.pt
-*.pth
 *.sqlite*
