@@ -1,0 +1,12 @@
+.git
+.venv
+runtime
+test-results
+experiments
+data
+results
+models
+.env
+.env.*
+__pycache__
+*.sqlite*

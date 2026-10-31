@@ -1,5 +1,13 @@
 # WoundWatch
 
+## Local web dashboard
+
+The repository now includes a responsive patient and wound-monitoring dashboard
+integrated with the existing checkpoints. See [WEB_APP.md](WEB_APP.md) for setup,
+model capabilities, storage, testing and a beginner walkthrough. Start with
+`.\start.ps1` after installing dependencies; open http://127.0.0.1:8000.
+
+
 Python/PyTorch research pipeline for wound-image experiments. It is an
 experimental research aid, not a diagnosis or a substitute for clinical review.
 The scripts run from the repository root and derive data/model paths from

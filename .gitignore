@@ -18,3 +18,6 @@ venv/
 *.mltbx
 *.log
 *.sqlite*
+/runtime/
+/test-results/
+/experiments/

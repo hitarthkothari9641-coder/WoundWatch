@@ -108,6 +108,25 @@ not care recommendations.
 
 ## Known limits
 
+### Colour visualization and retraining update
+
+The web workflow now supports fixed-scale raw CIELAB a* overlays and
+Elevated-logit Grad-CAM. Neither is an infection map or clinical explanation.
+Colour features use a bounded-resolution, scaled-ring method with versioned
+comparisons; older scans must be recalculated before mixing methods. Quality
+rejection still suppresses classification, while raw colour may be available
+with a quality warning. Grad-CAM requires the original classifier fingerprint
+and is unavailable when classification was skipped.
+
+A separate decoder-fine-tuning experiment improved validation Dice from
+0.8310 to 0.8528 and external Medetec Dice from 0.2358 to 0.4162 when both models
+were evaluated with inference-matched bicubic preprocessing. Training used 810
+FUSeg images, selection used 200 validation images, and the external set has only
+8 images. See `results/segmenter_retrain_report.json`. This is exploratory,
+not patient-independent clinical validation. The candidate remains separate,
+the active defaults are unchanged, and classifier accuracy was not improved
+or re-estimated by this segmentation experiment.
+
 - Small, imbalanced dataset; only 23 High examples.
 - No patient IDs; image-level CV can leak related images across folds.
 - The provided test partition is also image-level; patient disjointness has not
@@ -135,9 +154,14 @@ ImageNet/PyTorch weight terms must be reviewed before redistribution or hosted
 use. Kaggle and Medetec source license records are incomplete locally. Do not
 redistribute images or derived weights until permissions are confirmed.
 
-`service/app.py` limits upload bytes and decoded pixels, processes images in
-memory, does not store uploads or log image content/filenames, and returns
-generic errors. Keep reverse-proxy body logging disabled. Monitor aggregate
+`service/app.py` limits upload bytes and decoded pixels. The original `/predict`
+endpoint processes images in memory without storing uploads. The local dashboard's
+`/api/scans` workflow explicitly persists patient metadata, screening results,
+colour measurements and metadata-free PNG images in the configured local runtime
+directory. This is an unauthenticated localhost research workspace, not a
+production patient-data system. See `WEB_APP.md` for storage and access limitations.
+The service does not log image content/filenames and returns generic inference
+errors. Keep reverse-proxy body logging disabled. Monitor aggregate
 service health, latency, quality rejection, delayed consented outcomes, and
 discrimination/calibration over time. Do not log patient identifiers or
 individual predictions. Revalidate and recalibrate only on an appropriately

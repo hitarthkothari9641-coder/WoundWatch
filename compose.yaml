@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: service/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WOUNDWATCH_ENV: production
+      WOUNDWATCH_DATA_DIR: /app/runtime
+    command: [uvicorn, service.app:app, --host, 0.0.0.0, --port, "8000", --no-access-log, --proxy-headers, --forwarded-allow-ips, "*"]
+    # No host port: only the private proxy network can reach Uvicorn.
+    networks: [backend]
+    volumes:
+      - ./models:/app/models:ro
+      - woundwatch-data:/app/runtime
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/live',headers={'X-Forwarded-Proto':'https'}))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      WOUNDWATCH_DOMAIN: ${WOUNDWATCH_DOMAIN:?Set a domain in .env}
+    networks: [backend,public]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app]
+networks:
+  backend:
+    internal: true
+  public:
+volumes:
+  woundwatch-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,27 @@
+name: Application checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r service/requirements-dev.txt
+      - run: python -m unittest discover -s python/tests -v
+        env:
+          PYTHONPATH: python
+      - run: python -m unittest service.test_dashboard service.test_security -v
+        env:
+          PYTHONPATH: python
+      - run: node --check service/web/app.js && node --check service/web/visualizations.js
