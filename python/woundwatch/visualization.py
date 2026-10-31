@@ -37,8 +37,8 @@ def colour_heatmap(image):
     # Fixed scale across photos, not per-image min/max normalization.
     return overlay(view,(lab[...,1]+20)/80)
 
-def gradcam(image,classifier,checkpoint):
-    """Elevated raw logit, layer4, gradient spatial mean + weighted ReLU.
+def gradcam_values(image,classifier,checkpoint):
+    """Normalised (0-1) Elevated-logit Grad-CAM resized to the 768px preview of `image`.
 
     Hook is removed even on failure. autograd.grad does not mutate parameter
     gradients. The caller serializes access to the shared classifier.
@@ -56,10 +56,13 @@ def gradcam(image,classifier,checkpoint):
                 raise ValueError('No positive Elevated-class Grad-CAM activation for this photograph')
             values=(cam/maximum).detach().cpu().numpy()
         view=image.copy();view.thumbnail((768,768),Image.Resampling.BICUBIC)
-        values=np.asarray(Image.fromarray(values).resize(view.size,Image.Resampling.BILINEAR))
-        return overlay(view,values)
+        return view,np.asarray(Image.fromarray(values).resize(view.size,Image.Resampling.BILINEAR))
     finally:
         hook.remove()
+
+def gradcam(image,classifier,checkpoint):
+    view,values=gradcam_values(image,classifier,checkpoint)
+    return overlay(view,values)
 
 def compare_features(current,previous):
     if not current.get('features') or not previous.get('features'):

@@ -20,6 +20,13 @@ class SecurityTests(unittest.TestCase):
         with patch.dict(os.environ,{'WOUNDWATCH_ENV':'prod'}):
             with self.assertRaises(RuntimeError): configuration()
 
+    def test_origin_secret_gate(self):
+        with patch.dict(os.environ,{'WOUNDWATCH_ORIGIN_SECRET':'edge-secret-test','WOUNDWATCH_USERNAME':'','WOUNDWATCH_PASSWORD':''}):
+            client=TestClient(app)
+            self.assertEqual(client.get('/live').status_code,200)
+            self.assertEqual(client.get('/api/settings').status_code,403)
+            self.assertEqual(client.get('/api/settings',headers={'x-origin-secret':'edge-secret-test'}).status_code,401)
+
     def test_auth_host_origin_and_size(self):
         with patch.dict(os.environ,{'WOUNDWATCH_USERNAME':'operator','WOUNDWATCH_PASSWORD':'test-only-password-123456789','WOUNDWATCH_ENV':'local'}):
             client=TestClient(app)

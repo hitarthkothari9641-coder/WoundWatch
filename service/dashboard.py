@@ -245,6 +245,33 @@ def visualization(identifier: str,kind: Literal['colour','gradcam']):
     except Exception:
         raise HTTPException(503,'Visualization unavailable; check stored image and model')
 
+@router.get('/scans/{identifier}/guidance')
+def guidance(identifier: str):
+    """Plain-language reading guide for the stored scan's Grad-CAM and colour measurements."""
+    from .app import models_once,model_fingerprints
+    from woundwatch.guidance import attention_regions,build_guidance
+    from woundwatch.inference import segment_wound,wound_and_ring
+    from woundwatch.visualization import gradcam_values
+    scan=required('scans',identifier)
+    shares=None;found=True
+    try:
+        with inference_lock:
+            (seg,_),(clf,ck)=models_once()
+            if scan['result']['status']!='retake' and scan.get('model_fingerprints',{}).get('classifier')==model_fingerprints()['classifier']:
+                image=read_rgb(store.ROOT/'images'/scan['image_file'])
+                try:
+                    view,cam=gradcam_values(image,clf,ck)
+                    ring=max(1,round(12*max(view.size)/256))
+                    mask=segment_wound(view,seg);found=float(mask.mean())>=CFG.minimum_wound_area_fraction
+                    if found:
+                        wound,ring_mask=wound_and_ring(view,mask,ring)
+                        shares=attention_regions(cam,wound,ring_mask)
+                except ValueError:pass  # flat Grad-CAM: guidance says attention is unavailable
+            threshold=float(ck['threshold_youden'])
+    except Exception:
+        raise HTTPException(503,'Guidance unavailable; check stored image and model')
+    return build_guidance(scan['result'],shares,scan.get('features'),threshold,outline_found=found)
+
 class Review(BaseModel):
     status: Literal['pending', 'reviewed']
     outcome: Literal['no_additional_action', 'follow_up', 'urgent_follow_up', 'unable_to_assess'] | None = None

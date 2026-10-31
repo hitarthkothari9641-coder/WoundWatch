@@ -3,9 +3,10 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state={user:null,csrf:'',patients:[],scans:[],wounds:[],notifications:[],settings:{},patient:'',selected:'',wound:'',page:'home',tab:'summary',query:'',status:'',risk:'',sort:'latest',loginRole:'patient'};
 let busy=false,previewURL=null,uploadFile=null;
-const iconPaths={home:'M3 10l9-7 9 7v11h-7v-7h-4v7H3z',profile:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M4 21v-2a8 8 0 0 1 16 0v2',scans:'M4 7h4l2-3h4l2 3h4v13H4z M12 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8',analysis:'M5 3h14v18H5z M8 8h8 M8 12h5 M8 16h8',risk:'M12 3l8 4v6c0 5-8 9-8 9S4 18 4 13V7z M8 12l3 3 5-6',notifications:'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z M10 21h4',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z',arrow:'M5 12h14 M13 6l6 6-6 6',plus:'M12 5v14 M5 12h14',logout:'M9 3H4v18h5 M12 12h9 M17 8l4 4-4 4',check:'M5 12l4 4L19 6'};
+const iconPaths={home:'M3 10l9-7 9 7v11h-7v-7h-4v7H3z',profile:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M4 21v-2a8 8 0 0 1 16 0v2',scans:'M4 7h4l2-3h4l2 3h4v13H4z M12 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8',model:'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',analysis:'M5 3h14v18H5z M8 8h8 M8 12h5 M8 16h8',risk:'M12 3l8 4v6c0 5-8 9-8 9S4 18 4 13V7z M8 12l3 3 5-6',notifications:'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z M10 21h4',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z',arrow:'M5 12h14 M13 6l6 6-6 6',plus:'M12 5v14 M5 12h14',logout:'M9 3H4v18h5 M12 12h9 M17 8l4 4-4 4',check:'M5 12l4 4L19 6'};
 const icon=k=>`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${iconPaths[k]||iconPaths.profile}"/></svg>`;
-const brand=()=>'<a class="brand" href="#home" aria-label="Wound Trace home"><span>WOUND TRACE</span><small>CONTINUOUS POST-SURGICAL VISUAL MONITORING</small></a>';
+let brandSvg='';
+const brand=()=>`<a class="brand" href="#home" aria-label="Wound Trace home">${brandSvg||'<span>WOUND TRACE</span>'}</a>`;
 const isDoctor=()=>state.user?.role==='clinician';
 const person=id=>state.patients.find(p=>p.id===id);
 const chosen=()=>state.scans.find(s=>s.id===state.selected);
@@ -55,17 +56,17 @@ function render(){
     if(!state.user){authScreen();return;}
     const aliases={overview:'home',patients:'home',history:isDoctor()?'patient':'profile',colour:isDoctor()?'patient':'profile',reports:isDoctor()?'patient':'profile',analysis:isDoctor()?'patient':'profile',risk:isDoctor()?'patient':'profile',notifications:'home'};
     let page=location.hash.slice(1)||'home';page=aliases[page]||page;
-    if(!['home','profile','patient','scans','settings'].includes(page))page='home';
+    if(!['home','profile','patient','scans','settings','model'].includes(page))page='home';
     if(page==='patient'&&!isDoctor())page='profile';state.page=page;
-    const nav=[['home','Home'],['profile','My Profile'],['settings','Settings']];
+    const nav=[['home','Home'],['profile','My Profile'],['model','Model'],['settings','Settings']];
     const active=page==='patient'?'home':page==='scans'?'profile':page;
     const unread=state.notifications.filter(n=>!n.read).length;
     const showMobileScan=!isDoctor()&&page!=='home'&&page!=='scans';
-    $('#app').innerHTML=`<div class="shell"><header class="app-header">${brand()}<nav class="nav-capsule" aria-label="Main navigation">${nav.map(([k,label])=>`<a href="#${k}" class="${k===active?'active':''}" ${k===active?'aria-current="page"':''}>${icon(k)}<span>${label}</span></a>`).join('')}</nav><div class="account-capsule"><div class="notification-control"><button id="notification-bell" class="icon-button" aria-label="Notifications${unread?`, ${unread} unread`:''}" aria-expanded="false" aria-controls="notification-popover">${icon('notifications')}${unread?`<span class="notification-count">${unread>99?'99+':unread}</span>`:''}</button><section id="notification-popover" class="notification-popover" aria-label="Notifications" hidden>${notificationContent()}</section></div><a class="account-link" href="#profile"><span class="account-label">${isDoctor()?'Doctor Account':'Patient Account'}</span><span class="avatar" aria-hidden="true">${esc(state.user.name.slice(0,2).toUpperCase())}</span></a><button id="logout" class="icon-button sign-out" aria-label="Sign out" title="Sign out">${icon('logout')}<span>Sign Out</span></button></div></header><main id="main" tabindex="-1">${({home:homeView,profile:()=>isDoctor()?accountProfileView():profileView(),patient:profileView,scans:uploadView,settings:settingsView}[page])()}</main><footer>This application provides AI-assisted screening information and does not replace clinical examination or professional medical diagnosis.</footer>${showMobileScan?'<a class="mobile-scan" href="#scans">'+icon('plus')+' Scan My Wound</a>':''}</div>`;
+    $('#app').innerHTML=`<div class="shell"><header class="app-header">${brand()}<nav class="nav-capsule" aria-label="Main navigation">${nav.map(([k,label])=>`<a href="#${k}" class="${k===active?'active':''}" ${k===active?'aria-current="page"':''}>${icon(k)}<span>${label}</span></a>`).join('')}</nav><div class="account-capsule"><div class="notification-control"><button id="notification-bell" class="icon-button" aria-label="Notifications${unread?`, ${unread} unread`:''}" aria-expanded="false" aria-controls="notification-popover">${icon('notifications')}${unread?`<span class="notification-count">${unread>99?'99+':unread}</span>`:''}</button><section id="notification-popover" class="notification-popover" aria-label="Notifications" hidden>${notificationContent()}</section></div><a class="account-link" href="#profile"><span class="account-label">${isDoctor()?'Doctor Account':'Patient Account'}</span><span class="avatar" aria-hidden="true">${esc(state.user.name.slice(0,2).toUpperCase())}</span></a><button id="logout" class="icon-button sign-out" aria-label="Sign out" title="Sign out">${icon('logout')}<span>Sign Out</span></button></div></header><main id="main" tabindex="-1">${({home:homeView,profile:()=>isDoctor()?accountProfileView():profileView(),patient:profileView,scans:uploadView,settings:settingsView,model:modelView}[page])()}</main><footer>This application provides AI-assisted screening information and does not replace clinical examination or professional medical diagnosis.</footer>${showMobileScan?'<a class="mobile-scan" href="#scans">'+icon('plus')+' Scan My Wound</a>':''}</div>`;
     $('#notification-bell').onclick=()=>toggleNotifications();
     $('#close-notifications').onclick=()=>toggleNotifications(false,true);
     document.querySelectorAll('[data-sign-out],#logout').forEach(b=>b.onclick=signOut);
-    bindViews();enhanceVisualizations();
+    bindViews();enhanceVisualizations();if(page==='model')loadModelPage();
 }
 function toggleNotifications(open,focusBell=false){
     const panel=$('#notification-popover'),bell=$('#notification-bell');if(!panel)return;
@@ -82,5 +83,5 @@ function openDialog(title,content,onSubmit){
 }
 window.addEventListener('hashchange',()=>{if(busy){location.hash=state.page;toast('Please wait for your analysis to finish.');return;}render();window.scrollTo(0,0);});
 window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
-async function start(){try{const result=await api('/api/auth/me');state.user=result.user;state.csrf=result.csrf_token;await refresh();render();}catch(e){if(e.status===401)authScreen();else if(e.status===404)authScreen(false,'The old server is still running. Press Ctrl+C in its terminal, run .\\start.ps1, and refresh this page.');else authScreen(false,'Cannot connect to Wound Trace. '+e.message);}}
+async function start(){try{brandSvg=await fetch('/assets/brand/wound-trace-horizontal.svg').then(r=>r.ok?r.text():'').then(t=>t.replace(/<\?xml[^>]*\?>/,'').replace('width="100%" height="100%"','role="img" aria-label="Wound Trace"')).catch(()=>'');const result=await api('/api/auth/me');state.user=result.user;state.csrf=result.csrf_token;await refresh();render();}catch(e){if(e.status===401)authScreen();else if(e.status===404)authScreen(false,'The old server is still running. Press Ctrl+C in its terminal, run .\\start.ps1, and refresh this page.');else authScreen(false,'Cannot connect to Wound Trace. '+e.message);}}
 start();

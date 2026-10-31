@@ -4,6 +4,7 @@ import json
 import threading
 import textwrap
 from datetime import date
+from pathlib import Path
 from uuid import uuid5,NAMESPACE_URL
 from fastapi import APIRouter,HTTPException
 from fastapi.responses import Response
@@ -91,72 +92,136 @@ def add_wound(identifier:str,body:Wound):
         audit(db,'wound_created',key)
     return record
 
+ASSETS=Path(__file__).parent/'report_assets'
+NAVY,TEAL,SINDOOR,KESARI,HALDI='#0C1E36','#0E8388','#D92638','#E25822','#F59E0B'
+BAND_COLOUR={'elevated':SINDOOR,'defer':HALDI,'low':TEAL}
+A4=(8.27,11.69)
+
+def _font(name,size):
+    from matplotlib.font_manager import FontProperties
+    return FontProperties(fname=str(ASSETS/name),size=size)
+
+def _text(fig,x,y,s,font,size,color=NAVY,**kw):
+    fig.text(x,y,s,fontproperties=_font(font,size),color=color,parse_math=False,**kw)
+
+def _para(fig,x,y,s,font,size,width,step,color=NAVY):
+    for seg in textwrap.wrap(s,width) or ['']:
+        _text(fig,x,y,seg,font,size,color);y-=step
+    return y
+
+def _page(title,subtitle):
+    """Brand page chrome: clinical seal (kit: 72-96px on audit reports), Outfit title, Sindoor/Peacock rule."""
+    from matplotlib.figure import Figure
+    from matplotlib.lines import Line2D
+    from PIL import Image
+    fig=Figure(figsize=A4)
+    with Image.open(ASSETS/'clinical-seal.png') as seal:
+        ax=fig.add_axes([.07,.895,.115,.115*A4[0]/A4[1]]);ax.imshow(seal);ax.axis('off')
+    _text(fig,.205,.947,title,'Outfit-ExtraBold.ttf',21);_text(fig,.205,.921,subtitle,'PlusJakartaSans-SemiBold.ttf',9.5,TEAL)
+    fig.add_artist(Line2D([.07,.93],[.885,.885],color=TEAL,lw=1.2,transform=fig.transFigure))
+    fig.add_artist(Line2D([.07,.16],[.885,.885],color=SINDOOR,lw=3,transform=fig.transFigure))
+    return fig
+
+def _section(fig,y,label):
+    _text(fig,.07,y,label.upper(),'PlusJakartaSans-SemiBold.ttf',8,TEAL);return y-.028
+
+def report_figures(scan,history,guide,original,overlays):
+    snap=scan['patient_snapshot'];result=scan['result'];demo=bool(scan.get('demo_only'))
+    prob=f"{100*result['probability']:.1f}%" if result['probability'] is not None else 'Unavailable'
+    rows=[('Patient',f"{snap['name']} ({scan['patient_id']})"),('Surgery',f"{snap.get('surgery_type','Not recorded')} | {scan['surgery_date']}"),
+          ('Wound',scan['wound_location']),('Photograph date',scan['scan_date']),('Analysis time',scan['created_at']),
+          ('Screening band',f"{result['risk_band']} | workflow: {result['status']}"),('Elevated-label probability',prob),
+          ('Healthcare review',f"{scan['review_status']} (recording review is not diagnosis approval)")]
+    figs=[]
+    fig=_page('Monitoring report','Post-surgical wound monitoring | Wound Trace');y=.85
+    y=_section(fig,y,'Scan details')
+    for k,v in rows:
+        _text(fig,.07,y,k,'PlusJakartaSans-SemiBold.ttf',9)
+        y=_para(fig,.31,y,v,'PlusJakartaSans-Regular.ttf',9.5,64,.022)-.006
+    band=BAND_COLOUR.get(result['risk_band'],NAVY);y-=.012
+    from matplotlib.patches import Rectangle
+    box=textwrap.wrap(guide['summary'],70);h=.03+.022*len(box)
+    fig.add_artist(Rectangle((.07,y-h+.012),.86,h,transform=fig.transFigure,facecolor=band,alpha=.09,edgecolor='none'))
+    fig.add_artist(Rectangle((.07,y-h+.012),.007,h,transform=fig.transFigure,facecolor=band,edgecolor='none'))
+    yy=y-.012
+    for seg in box:_text(fig,.095,yy,seg,'PlusJakartaSans-SemiBold.ttf',10.5);yy-=.022
+    y-=h+.02
+    if demo:
+        y=_para(fig,.07,y,'DEMO DATA ONLY: synthetic account and Kaggle wound-type example. Infection-risk prediction is withheld; not for clinical care.','PlusJakartaSans-SemiBold.ttf',8.5,95,.02,KESARI)-.01
+    ax=fig.add_axes([.1,.1,.8,max(.1,y-.12)]);ax.imshow(original);ax.axis('off')
+    figs.append(fig)
+
+    fig=_page('How to read this scan','Guidance for the reviewing clinician');y=.85
+    y=_section(fig,y,'What the model and measurements show')
+    for line in guide['observations']:
+        y=_para(fig,.09,y,'- '+line,'PlusJakartaSans-Regular.ttf',9.5,92,.021)-.008
+    y=_section(fig,y-.01,'What a clinician could check')
+    for line in guide['check']:
+        y=_para(fig,.09,y,'- '+line,'PlusJakartaSans-Regular.ttf',9.5,92,.021)-.008
+    y=_section(fig,y-.01,'Limits')
+    notes=['Research screening only. This report does not confirm or exclude infection and does not replace clinical examination.',
+           'Differences in colour can reflect lighting, white balance, skin tone, pose or segmentation error. A single image cannot establish healing change.']
+    notes+=([f"Source category: {scan.get('source_class','unknown')}. Wound-type category is not an infection outcome."] if demo else
+            ['The probability is a model estimate for the training label, not diagnostic certainty.'])
+    for line in notes:y=_para(fig,.09,y,'- '+line,'PlusJakartaSans-Regular.ttf',9.5,92,.021)-.008
+    figs.append(fig)
+
+    for title,overlay in overlays:
+        fig=_page('Visual analysis','Overlay for clinician review')
+        ax=fig.add_axes([.1,.2,.8,.64]);ax.imshow(overlay);ax.axis('off')
+        _para(fig,.07,.165,title,'PlusJakartaSans-SemiBold.ttf',9.5,95,.021)
+        _para(fig,.07,.12,'Visualization only. It does not establish wound boundaries, infection or clinical cause.','PlusJakartaSans-Regular.ttf',8.5,100,.02)
+        figs.append(fig)
+
+    feats=list((scan.get('features') or {}).items())
+    drift=list((scan.get('drift') or {}).items())
+    lines=[('h','Colour measurements (raw image features, not predictions)')]+[('kv',(k,f'{v:.3f}')) for k,v in feats]
+    if not feats:lines.append(('p','No valid measurements available.'))
+    lines+=[('h',f"Colour comparison | previous scan: {scan.get('previous_id') or 'none linked'}")]+[('kv',(f'Delta {k}',f'{v:.3f}')) for k,v in drift]
+    if not drift:lines.append(('p',scan.get('comparison_error') or 'No comparison available.'))
+    lines+=[('h','Monitoring history (same wound)')]+[('kv',(s['scan_date'],f"{s['result']['risk_band']} | review: {s['review_status']}")) for s in history]
+    fig=_page('Measurements and history','Colour features and monitoring record');y=.85
+    for kind,val in lines:
+        if y<.1:
+            figs.append(fig);fig=_page('Measurements and history','Continued');y=.85
+        if kind=='h':y=_section(fig,y-.008,val)
+        elif kind=='p':y=_para(fig,.09,y,val,'PlusJakartaSans-Regular.ttf',9,95,.02)
+        else:
+            _text(fig,.09,y,val[0],'PlusJakartaSans-Regular.ttf',9);_text(fig,.5,y,val[1],'SpaceMono-Regular.ttf',9);y-=.02
+    figs.append(fig)
+    from matplotlib.lines import Line2D
+    for i,f in enumerate(figs,1):
+        f.add_artist(Line2D([.07,.93],[.062,.062],color='#C9D1DA',lw=.8,transform=f.transFigure))
+        _text(f,.07,.04,'Wound Trace | Research screening tool. Not a diagnosis; clinician review required.','PlusJakartaSans-Regular.ttf',7.5,'#55657A')
+        _text(f,.93,.04,f'{i} / {len(figs)}','SpaceMono-Regular.ttf',7.5,'#55657A',ha='right')
+    return figs
+
 @router.get('/scans/{identifier}/report.pdf')
 def report(identifier:str):
     scan=required('scans',identifier)
-    # Reuse installed Matplotlib's PDF backend; no browser or new dependency.
-    from matplotlib.figure import Figure
     from matplotlib.backends.backend_pdf import PdfPages
     from PIL import Image
-    import numpy as np
     out=io.BytesIO()
     history=sorted([s for s in store.records('scans') if s['patient_id']==scan['patient_id'] and enrich_scan(s)['wound_id']==enrich_scan(scan)['wound_id']],key=lambda s:(s['scan_date'],s['created_at']))
-    snapshot=scan['patient_snapshot']
-    demo=bool(scan.get('demo_only'))
-    lines=[f"Patient: {snapshot['name']} ({scan['patient_id']})",f"Surgery: {snapshot.get('surgery_type','Not recorded')} | {scan['surgery_date']}",
-           f"Wound: {scan['wound_location']}",f"Photograph date: {scan['scan_date']}",f"Analysis time: {scan['created_at']}",
-           f"Screening: {scan['result']['risk_band']} | Workflow: {scan['result']['status']}",
-           'Elevated-label probability: '+(f"{100*scan['result']['probability']:.1f}%" if scan['result']['probability'] is not None else 'Unavailable'),
-           f"Healthcare review: {scan['review_status']} (recording review is not diagnosis approval)",*scan['result']['reasons']]
-    if demo:
-        lines += ['DEMO DATA ONLY: synthetic account and Kaggle wound-type example.',
-                  f"Source category: {scan.get('source_class','unknown')}. Wound-type category is not an infection outcome.",
-                  'Infection-risk prediction is withheld. This example must not be used for clinical care.']
-    else:
-        lines += ['Analysis: the reported model output is an experimental screening result for clinician review.',
-                  'The probability is a model estimate for the training label, not diagnostic certainty.',
-                  'Colour measurements describe image appearance only; lighting, skin tone and segmentation affect them.']
     image_path=store.ROOT/'images'/scan['image_file']
     try:
         with Image.open(image_path) as image: original=image.convert('RGB').copy()
     except OSError:raise HTTPException(404,'Stored photograph is unavailable')
+    from .dashboard import guidance
+    try:guide=guidance(identifier)
+    except HTTPException:
+        from woundwatch.guidance import build_guidance
+        guide=build_guidance(scan['result'],None,scan.get('features'),None,outline_found=False)
     overlays=[]
     try:
         from .app import models_once
         from woundwatch.visualization import colour_heatmap,gradcam
         with pdf_lock:
             (_, _),(classifier,checkpoint)=models_once()
-            overlays=[('CIELAB a* colour heatmap',colour_heatmap(original))]
-            try: overlays.append(('Elevated-logit Grad-CAM (model sensitivity visualization, not an explanation)',gradcam(original,classifier,checkpoint)))
+            overlays=[('CIELAB a* colour heatmap: measured red-green appearance',colour_heatmap(original))]
+            try: overlays.append(('Elevated-logit Grad-CAM: model sensitivity visualization, not an explanation',gradcam(original,classifier,checkpoint)))
             except Exception: pass
     except Exception: overlays=[]
-    try:
-        with pdf_lock,PdfPages(out) as pdf:
-            fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Monitoring report',fontsize=20,color='#0C1E36',parse_math=False)
-            y=.89
-            for line in lines:
-                for segment in textwrap.wrap(line,90):fig.text(.08,y,segment,fontsize=10,parse_math=False);y-=.025
-            ax=fig.add_axes([.1,.17,.8,max(.12,y-.22)])
-            ax.imshow(original)
-            ax.axis('off');fig.text(.08,.1,'Research screening only. This report does not confirm or exclude infection.',fontsize=10,parse_math=False)
-            fig.text(.08,.07,'This does not replace clinical examination or professional medical diagnosis.',fontsize=10,parse_math=False);pdf.savefig(fig)
-            for title,overlay in overlays:
-                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Visual analysis',fontsize=18,color='#0C1E36',parse_math=False)
-                ax=fig.add_axes([.1,.18,.8,.7]);ax.imshow(overlay);ax.axis('off')
-                fig.text(.08,.1,title,fontsize=10,parse_math=False)
-                fig.text(.08,.07,'Visualization only. It does not establish wound boundaries, infection, or clinical cause.',fontsize=9,parse_math=False);pdf.savefig(fig)
-            detail=['COLOUR MEASUREMENTS (raw image features, not predictions)']
-            detail.extend([f'{k}: {v:.3f}' for k,v in (scan.get('features') or {}).items()] or ['No valid measurements available.'])
-            detail+=['','ANALYSIS NOTES','CIELAB a* heatmap shows image redness appearance; it is not a diagnosis.',
-                     'Grad-CAM visualizes model sensitivity and is not a causal explanation.',
-                     'Differences can reflect lighting, white balance, skin tone, pose, or segmentation error.',
-                     'A single image cannot establish healing change.','', 'COLOUR COMPARISON',f"Previous scan: {scan.get('previous_id') or 'None linked'}"]
-            detail.extend([f'Delta {k}: {v:.3f}' for k,v in (scan.get('drift') or {}).items()] or [scan.get('comparison_error') or 'No comparison available.'])
-            detail+=['','MONITORING HISTORY (same wound)']+[f"{s['scan_date']} | {s['result']['risk_band']} | review: {s['review_status']}" for s in history]
-            wrapped=[part for line in detail for part in (textwrap.wrap(line,95) or [''])]
-            for offset in range(0,len(wrapped),40):
-                fig=Figure(figsize=(8.27,11.69));fig.text(.08,.94,'Wound Trace | Measurements and history',fontsize=17,color='#0C1E36',parse_math=False)
-                for i,line in enumerate(wrapped[offset:offset+40]):fig.text(.08,.89-i*.019,line,fontsize=9,parse_math=False)
-                pdf.savefig(fig)
-    except OSError:raise HTTPException(404,'Stored photograph is unavailable')
-    return Response(out.getvalue(),media_type='application/pdf',headers={'Content-Disposition':f'attachment; filename="woundwatch-{identifier[:8]}.pdf"'})
+    with pdf_lock,PdfPages(out) as pdf:
+        for fig in report_figures(scan,history,guide,original,overlays):pdf.savefig(fig)
+    return Response(out.getvalue(),media_type='application/pdf',headers={'Content-Disposition':f'attachment; filename="woundtrace-{identifier[:8]}.pdf"'})

@@ -1,5 +1,6 @@
 """Load checkpoints and run quality gate, wound segmentation and risk prediction."""
 import math
+import os
 from pathlib import Path
 import numpy as np
 import torch
@@ -13,7 +14,11 @@ from .train_segmentation import DeepLabV3Plus18
 def load_classifier(path=None):
     path=path or CFG.models/"classifier.pt"
     if not path.is_file(): raise FileNotFoundError(f"Classifier checkpoint missing: {path}")
-    ck=torch.load(path,map_location="cpu",weights_only=True); net=models.resnet18(weights=None); net.fc=nn.Linear(net.fc.in_features,2); net.load_state_dict(ck["state_dict"]); net.eval().to(device()); return net,ck
+    ck=torch.load(path,map_location="cpu",weights_only=True)
+    if ck.get("kind")=="ensemble_lr":
+        from .ensemble import build_ensemble
+        return build_ensemble(ck).to(device()),ck
+    net=models.resnet18(weights=None); net.fc=nn.Linear(net.fc.in_features,2); net.load_state_dict(ck["state_dict"]); net.eval().to(device()); return net,ck
 
 def load_segmenter(path=None):
     path=path or CFG.models/"segmenter.pt"
@@ -46,13 +51,16 @@ def quality_check(image,segmenter=None,thresholds=None):
     # Discrete 3x3 Laplacian, edge replicated.
     k=np.array([[0,1,0],[1,-4,1],[0,1,0]],float); p=np.pad(gray,1,mode="edge")
     lap=sum(k[i,j]*p[i:i+gray.shape[0],j:j+gray.shape[1]] for i in range(3) for j in range(3))
-    blur=float(lap.var()); clipped=float(np.mean((gray<=.01)|(gray>=.99))); reasons=[]
+    blur=float(lap.var()); clipped=float(np.mean((gray<=.01)|(gray>=.99))); reasons=[]; warnings=[]
+    # advisory: the foot-ulcer segmenter often misses surgical wounds; the classifier does not use the mask,
+    # so a missing outline warns (colour/region readings unavailable) instead of forcing a retake.
+    area_notes=warnings if os.getenv("WOUNDWATCH_AREA_GATE","strict")=="advisory" else reasons
     if blur<thresholds["blur_variance_minimum"]: reasons.append("Image may be blurred")
     if clipped>thresholds["max_clipped_fraction"]: reasons.append("Excessive dark/bright clipping")
     mask=segment_wound(image,segmenter); area=float(mask.mean())
-    if area<thresholds["min_wound_area_fraction"]: reasons.append("Predicted wound area below minimum")
+    if area<thresholds["min_wound_area_fraction"]: area_notes.append("Predicted wound area below minimum")
     if area>thresholds["max_wound_area_fraction"]: reasons.append("Predicted wound area above maximum")
-    return {"passed":not reasons,"reasons":reasons,"blur_variance":blur,"clipped_fraction":clipped,"wound_area_fraction":area,"thresholds":thresholds}
+    return {"passed":not reasons,"reasons":reasons,"warnings":warnings,"blur_variance":blur,"clipped_fraction":clipped,"wound_area_fraction":area,"thresholds":thresholds}
 
 @torch.inference_mode()
 def predict_image(image,segmenter=None,classifier=None,ck=None):
@@ -63,8 +71,9 @@ def predict_image(image,segmenter=None,classifier=None,ck=None):
     x=image_tensor(image,ck["image_size"]).unsqueeze(0).to(device()); raw=float(torch.softmax(classifier(x),1)[0,1].cpu())
     z=math.log(np.clip(raw,1e-7,1-1e-7)/(1-np.clip(raw,1e-7,1-1e-7)))
     prob=1/(1+math.exp(-float(ck["platt_intercept"]+ck["platt_slope"]*z))); t=float(ck["threshold_youden"]); width=float(ck.get("defer_half_width",CFG.defer_half_width))
-    if abs(prob-t)<=width: return {"status":"defer","probability":prob,"risk_band":"defer","reasons":["Probability is within defer band around decision threshold"]}
-    return {"status":"ok","probability":prob,"risk_band":"elevated" if prob>=t else "low","reasons":[]}
+    extra={"warnings":q["warnings"]} if q["warnings"] else {}
+    if abs(prob-t)<=width: return {"status":"defer","probability":prob,"risk_band":"defer","reasons":["Probability is within defer band around decision threshold"],**extra}
+    return {"status":"ok","probability":prob,"risk_band":"elevated" if prob>=t else "low","reasons":[],**extra}
 
 def predict_ssi(path):
     return predict_image(read_rgb(path))

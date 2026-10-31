@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Wound Trace",
+    "slug": "wound-trace",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.woundtrace.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Wound Trace uses the camera to photograph your wound for monitoring.",
+        "NSPhotoLibraryUsageDescription": "Choose an existing wound photo to analyse."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0C1E36",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.woundtrace.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Wound Trace uses the camera to photograph your wound for monitoring."
+        }
+      ]
+    ],
+    "scheme": "woundtrace",
+    "extra": {
+      "apiUrl": "https://wound-trace.dvpatel.workers.dev"
+    }
+  }
+}

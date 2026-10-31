@@ -1,7 +1,10 @@
 # Python classifier improvement TODO
 
-This is a proposed experiment plan, not a claim of improved performance. No
-training code, checkpoints, service defaults, or existing files are changed.
+> **Status (2026-11-01):** P0-P2 implemented in `python/woundwatch/experiments/` (see MODEL_CARD.md, "v2 frozen-backbone
+> ensemble"). Result: better development AP/AUROC; identical operating-point accuracy/precision/recall/F1 on the locked test
+> split; fine-tuning did not help. Not done: patient-level splits (no IDs), new confirmation cohort, segmentation validation.
+
+This was a proposed experiment plan, not a claim of improved performance.
 
 ## Current baseline and why accuracy alone is misleading
 

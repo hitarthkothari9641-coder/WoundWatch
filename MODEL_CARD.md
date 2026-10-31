@@ -192,3 +192,39 @@ service health, latency, quality rejection, delayed consented outcomes, and
 discrimination/calibration over time. Do not log patient identifiers or
 individual predictions. Revalidate and recalibrate only on an appropriately
 separated cohort before any prospective use.
+
+## v2 frozen-backbone ensemble (`models/classifier_v2.pt`)
+
+Protocol (MODEL_IMPROVEMENT_TODO P0-P2): development = the 549 supplied train+val images; 5-fold stratified CV x 3 seeds;
+selection rule fixed in advance = highest pooled out-of-fold average precision (AP); thresholds cross-fitted; the supplied
+test split (137 images, 20 Elevated) was not used to fit, select, calibrate or threshold. Code: `python/woundwatch/experiments/`.
+Raw results: `experiments/classifier/cv_*.json` (not committed) and `service/web/data/model_performance.json`.
+
+| Development CV (549 images) | AP | AUROC |
+| --- | ---: | ---: |
+| ResNet-18 frozen + logistic (baseline) | 0.463 | 0.763 |
+| ResNet-18 fine-tuning, 4 variants | 0.325-0.398 | 0.637-0.729 |
+| 11-backbone frozen-feature ensemble (selected) | 0.551 | 0.815 |
+
+Fine-tuning ResNet-18 on ~440 training images was worse than frozen features in every variant tried, including lighting
+augmentation (worst). The selected model averages per-backbone standardised logistic heads (ResNet-18/50/101, ConvNeXt-T/S,
+EfficientNet-B0/B3, DenseNet-121, Swin-T, ViT-B/16, RegNet-Y-8GF; horizontal-flip feature averaging; per-head C by inner CV).
+
+Locked test split, single evaluation, F1-optimal development threshold (0.227 calibrated):
+accuracy 76.6%, precision 34.2%, recall 65.0%, F1 44.8%, balanced accuracy 71.8% (TN 92, FP 25, FN 7, TP 13);
+AP 0.578 (baseline 0.542), AUROC 0.838 (95% CI 0.720-0.923; baseline 0.812).
+**The four requested operating-point metrics are identical to the baseline candidate.** Ranking quality (AP/AUROC) is higher in
+development CV (all three seeds) and on the test split, but with 20 positives the test difference is within noise. No clinical
+accuracy gain is claimed. Always predicting Low scores 85.4% accuracy and finds no Elevated case.
+
+### Quality gate finding
+The foot-ulcer-trained segmenter finds no wound (area < 0.2%) in 507 of 686 SurgWound images (74%); the gate's pass rate
+tracks the label (Low 20%, Medium 50%, High 74%), so any metric computed only on gate-accepted images is biased and most
+uploads would be rejected. The classifier does not use the mask. `WOUNDWATCH_AREA_GATE=advisory` turns the area check into a
+warning (blur/clipping still force a retake); region-based guidance and colour readings are then marked unavailable. Default
+remains `strict`. A surgical-wound segmenter needs labelled surgical masks, which this repository does not have.
+
+### Explanations
+Grad-CAM for v2 hooks the ResNet-18 member's layer4 and uses the ensemble logit, so the map shows that member's contribution
+only. `guidance.py` turns attention shares (wound / surrounding ring / elsewhere) and CIELAB a* measurements into a
+reading guide; it never states that infection is absent.

@@ -31,6 +31,10 @@ class SecurityMiddleware:
         except ValueError: return await reject(400,'Invalid host')
         if hostname not in hosts: return await reject(400,'Host not allowed')
         if production and scope.get('scheme')!='https': return await reject(400,'HTTPS is required')
+        # Optional edge gate: when set, only the Cloudflare Worker (which injects this header) may reach the app.
+        gate=os.getenv('WOUNDWATCH_ORIGIN_SECRET','')
+        if gate and scope['path']!='/live' and not hmac.compare_digest(headers.get('x-origin-secret','').encode(),gate.encode()):
+            return await reject(403,'Direct access is not allowed')
         if scope['path']!='/live' and username:
             valid=False
             try:

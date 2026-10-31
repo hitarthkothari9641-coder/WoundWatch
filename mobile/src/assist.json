@@ -1,0 +1,41 @@
+{
+  "_note": "Hindi and Gujarati text is machine-written plain language. Have a native speaker and a clinician review before public launch. Copy to mobile/src/assist.json after editing.",
+  "langs": {"en": ["English", "en-IN"], "hi": ["हिन्दी", "hi-IN"], "gu": ["ગુજરાતી", "gu-IN"]},
+  "ui": {
+    "en": {"help": "Help", "title": "How can we help?", "close": "Close", "read": "Read aloud", "stop": "Stop", "lang": "Language"},
+    "hi": {"help": "मदद", "title": "हम कैसे मदद करें?", "close": "बंद करें", "read": "सुनें", "stop": "रोकें", "lang": "भाषा"},
+    "gu": {"help": "મદદ", "title": "અમે કેવી રીતે મદદ કરીએ?", "close": "બંધ કરો", "read": "સાંભળો", "stop": "અટકાવો", "lang": "ભાષા"}
+  },
+  "sections": [
+    {"id": "photo",
+     "title": {"en": "How to take a good wound photo", "hi": "घाव की अच्छी फोटो कैसे लें", "gu": "ઘાનો સારો ફોટો કેવી રીતે લેવો"},
+     "steps": {
+       "en": ["Wash your hands. Sit near a window or under a bright light.", "Do not use flash. Hold the phone steady, one hand-length from the wound.", "Keep the whole wound and a little skin around it in the picture.", "Wait until the picture is sharp, then take it. Take it at the same time every day."],
+       "hi": ["हाथ धो लें। खिड़की के पास या तेज़ रोशनी में बैठें।", "फ्लैश न लगाएँ। फोन को स्थिर रखें, घाव से एक हाथ की दूरी पर।", "पूरा घाव और उसके आसपास की थोड़ी त्वचा फोटो में रखें।", "फोटो साफ़ दिखने तक रुकें, फिर लें। रोज़ एक ही समय पर फोटो लें।"],
+       "gu": ["હાથ ધોઈ લો. બારી પાસે અથવા તેજ પ્રકાશમાં બેસો.", "ફ્લૅશ ન વાપરો. ફોનને સ્થિર રાખો, ઘાથી એક હાથના અંતરે.", "આખો ઘા અને તેની આસપાસની થોડી ચામડી ફોટામાં રાખો.", "ફોટો સ્પષ્ટ દેખાય ત્યાં સુધી રાહ જુઓ, પછી લો. રોજ એક જ સમયે ફોટો લો."]}},
+    {"id": "use",
+     "title": {"en": "How to use Wound Trace", "hi": "Wound Trace कैसे इस्तेमाल करें", "gu": "Wound Trace કેવી રીતે વાપરવું"},
+     "steps": {
+       "en": ["Sign in with your email and password.", "Tap Scan, then take a photo. Write where the wound is and the date of surgery.", "Tap Analyse and wait a few seconds. On slow internet it can take longer.", "Read the result. Show it to your doctor or nurse."],
+       "hi": ["अपने ईमेल और पासवर्ड से साइन इन करें।", "स्कैन दबाएँ, फिर फोटो लें। घाव कहाँ है और सर्जरी की तारीख लिखें।", "विश्लेषण दबाएँ और कुछ सेकंड रुकें। धीमे इंटरनेट पर ज़्यादा समय लग सकता है।", "नतीजा पढ़ें। उसे अपने डॉक्टर या नर्स को दिखाएँ।"],
+       "gu": ["તમારા ઇમેઇલ અને પાસવર્ડથી સાઇન ઇન કરો.", "સ્કૅન દબાવો, પછી ફોટો લો. ઘા ક્યાં છે અને સર્જરીની તારીખ લખો.", "વિશ્લેષણ દબાવો અને થોડી સેકન્ડ રાહ જુઓ. ધીમા ઇન્ટરનેટ પર વધુ સમય લાગી શકે.", "પરિણામ વાંચો. તે તમારા ડૉક્ટર કે નર્સને બતાવો."]}},
+    {"id": "result",
+     "title": {"en": "What the result means", "hi": "नतीजे का मतलब", "gu": "પરિણામનો અર્થ"},
+     "steps": {
+       "en": ["Low, Elevated or Needs review is a hint for your care team. It is not a diagnosis.", "Low does not mean there is no infection. Watch your wound and your body.", "The colour map shows where the skin looks redder. Light can change the colours.", "Compare with your own earlier photos, not with other people."],
+       "hi": ["कम, बढ़ा हुआ या समीक्षा चाहिए: यह आपकी देखभाल टीम के लिए संकेत है। यह निदान नहीं है।", "कम का मतलब यह नहीं कि संक्रमण नहीं है। अपने घाव और शरीर पर नज़र रखें।", "रंग का नक्शा दिखाता है कि त्वचा कहाँ ज़्यादा लाल दिखती है। रोशनी से रंग बदल सकते हैं।", "अपनी ही पिछली फोटो से तुलना करें, दूसरों से नहीं।"],
+       "gu": ["ઓછું, વધેલું કે સમીક્ષા જરૂરી: આ તમારી સંભાળ ટીમ માટે સંકેત છે. તે નિદાન નથી.", "ઓછું એટલે ચેપ નથી એવું નથી. તમારા ઘા અને શરીર પર નજર રાખો.", "રંગનો નકશો બતાવે છે કે ચામડી ક્યાં વધુ લાલ દેખાય છે. પ્રકાશથી રંગ બદલાઈ શકે.", "તમારા પોતાના પહેલાંના ફોટા સાથે સરખામણી કરો, બીજા લોકો સાથે નહીં."]}},
+    {"id": "doctor",
+     "title": {"en": "When to contact your doctor", "hi": "डॉक्टर से कब मिलें", "gu": "ડૉક્ટરનો સંપર્ક ક્યારે કરવો"},
+     "steps": {
+       "en": ["Contact your doctor or the nearest hospital the same day if you have fever, more pain, swelling, pus, bad smell, spreading redness, or the wound opens.", "Do not wait for the app. It cannot replace an examination."],
+       "hi": ["बुखार, बढ़ता दर्द, सूजन, मवाद, बदबू, फैलती लालिमा हो या घाव खुल जाए तो उसी दिन अपने डॉक्टर या नज़दीकी अस्पताल से संपर्क करें।", "ऐप का इंतज़ार न करें। यह जाँच की जगह नहीं ले सकता।"],
+       "gu": ["તાવ, વધતો દુખાવો, સોજો, પરુ, દુર્ગંધ, ફેલાતી લાલાશ હોય કે ઘા ખુલી જાય તો તે જ દિવસે તમારા ડૉક્ટર કે નજીકની હૉસ્પિટલનો સંપર્ક કરો.", "એપની રાહ ન જુઓ. તે તપાસનું સ્થાન લઈ શકતી નથી."]}},
+    {"id": "data",
+     "title": {"en": "Slow internet or an old phone", "hi": "धीमा इंटरनेट या पुराना फोन", "gu": "ધીમું ઇન્ટરનેટ કે જૂનો ફોન"},
+     "steps": {
+       "en": ["Use Wi-Fi when you can. One photo is uploaded each time.", "Any phone with a web browser can open this page.", "If it fails, wait a minute and try again. Your earlier scans are safe."],
+       "hi": ["हो सके तो वाई-फ़ाई इस्तेमाल करें। हर बार एक ही फोटो अपलोड होती है।", "वेब ब्राउज़र वाला कोई भी फोन यह पेज खोल सकता है।", "अगर न चले तो एक मिनट रुककर फिर कोशिश करें। आपके पुराने स्कैन सुरक्षित हैं।"],
+       "gu": ["શક્ય હોય ત્યારે વાઇ-ફાઇ વાપરો. દર વખતે એક જ ફોટો અપલોડ થાય છે.", "વેબ બ્રાઉઝર ધરાવતો કોઈપણ ફોન આ પેજ ખોલી શકે છે.", "ન ચાલે તો એક મિનિટ રાહ જોઈને ફરી પ્રયત્ન કરો. તમારા અગાઉના સ્કૅન સુરક્ષિત છે."]}}
+  ]
+}

@@ -21,7 +21,7 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.on('response',lambda r:errors.append(f'{r.status}: {r.url}') if r.status>=400 and not(r.status==401 and r.url.endswith('/api/auth/me')) else None)
     page.goto(url)
-    assert page.title()=='Wound Trace - Your wound journey'
+    assert page.title()=='Wound Trace | Post-surgical wound monitoring'
     assert page.get_by_role('tab',name='Patient Login').is_visible()
     assert page.get_by_role('tab',name='Doctor Login').is_visible()
     page.locator('#sign-up-tab').click()

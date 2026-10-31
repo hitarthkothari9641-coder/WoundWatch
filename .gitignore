@@ -21,3 +21,12 @@ venv/
 /runtime/
 /test-results/
 /experiments/
+
+# Generated deploy output and local mobile build artifacts.
+/dist/
+/deploy/cloudflare/public/
+/deploy/cloudflare/.wrangler/
+/mobile/node_modules/
+/mobile/.expo/
+/results/inference/
+/mobile/.claude/

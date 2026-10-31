@@ -1,0 +1,18 @@
+name = "wound-trace"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# UI is served from the edge; build_public.sh copies service/web into ./public/assets.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/predict", "/health", "/live"]
+
+[vars]
+# Hugging Face Space direct host, e.g. "yourname-wound-trace-api.hf.space". Secret ORIGIN_SECRET set via `wrangler secret put`.
+BACKEND_HOST = "REPLACE-ME.hf.space"
+
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
