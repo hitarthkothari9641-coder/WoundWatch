@@ -27,6 +27,7 @@
       const say=el('button',{type:'button',className:'assist-say',textContent:ui.read});
       say.onclick=()=>speak(s.title[lang]+'. '+steps.join('. '),code);
       const stop=el('button',{type:'button',className:'assist-say ghost',textContent:ui.stop});stop.onclick=()=>speechSynthesis.cancel();
+      if(s.img)d.append(el('img',{src:s.img,alt:'QR code: open Wound Trace on your phone',className:'assist-qr',width:220,height:220}));
       d.append(ol,el('div',{className:'assist-actions'},say,stop));dlg.append(d);
     });
   }

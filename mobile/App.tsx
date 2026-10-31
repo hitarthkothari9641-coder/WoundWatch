@@ -112,7 +112,7 @@ function Help({ back }: { back: () => void }) {
         <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: k === lang }} onPress={() => { Speech.stop(); setLang(k); }} style={[s.chip, k === lang && s.chipOn]}>
           <Text style={[s.chipText, k === lang && { color: '#fff' }]}>{assist.langs[k][0]}</Text></Pressable>))}
     </View>
-    {assist.sections.map(sec => { const steps = sec.steps[lang]; return (
+    {assist.sections.filter(sec => !(sec as { web?: boolean }).web).map(sec => { const steps = sec.steps[lang]; return (
       <View key={sec.id} style={s.card}>
         <Text style={s.h3}>{sec.title[lang]}</Text>
         {steps.map((t, i) => <Text key={i} style={s.li}>{i + 1}. {t}</Text>)}
