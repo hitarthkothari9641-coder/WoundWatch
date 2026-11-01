@@ -34,7 +34,7 @@ Every screen says what the tool cannot do. A "Low" result never claims infection
 ```
 
 - **Web dashboard**: plain JavaScript, served from Cloudflare's edge, branded with the Wound Trace kit (Outfit, Plus Jakarta Sans, Space Mono; Sindoor, Kesari, Haldi, Peacock, Samudra palette).
-- **Mobile app**: React Native with Expo and TypeScript. One codebase for iOS and Android.
+- **Mobile app**: React Native with Expo and TypeScript. One codebase for iOS, Android and the browser. Scan the QR code in the dashboard Help panel (or open `/app/`) to run the same app on any phone with no install and no account.
 - **Backend**: FastAPI with cookie sessions, CSRF checks and per-patient access control. A shared secret means only the Cloudflare Worker can reach it.
 - **Model**: a frozen-feature ensemble of 11 ImageNet backbones with logistic-regression heads, calibrated with Platt scaling, plus a segmenter to locate the wound and ring of surrounding skin.
 

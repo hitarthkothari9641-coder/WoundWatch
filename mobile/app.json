@@ -23,7 +23,9 @@
       "package": "com.woundtrace.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-font",
@@ -37,6 +39,9 @@
     "scheme": "woundtrace",
     "extra": {
       "apiUrl": "https://wound-trace.dvpatel.workers.dev"
+    },
+    "experiments": {
+      "baseUrl": "/app"
     }
   }
 }

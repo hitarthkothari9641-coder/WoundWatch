@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-export const API = (process.env.EXPO_PUBLIC_API_URL || (Constants.expoConfig?.extra as any)?.apiUrl || '').replace(/\/$/, '');
+// On the web build the page and API share one origin (the Cloudflare Worker), so use relative URLs.
+export const API = Platform.OS === 'web' ? '' : (process.env.EXPO_PUBLIC_API_URL || (Constants.expoConfig?.extra as any)?.apiUrl || '').replace(/\/$/, '');
 let csrf = '';
 
 // Session is an HttpOnly cookie held by the native cookie jar; only the CSRF token lives in memory.
@@ -32,7 +34,8 @@ export const guidance = (id: string) => call<Guidance>(`/api/scans/${id}/guidanc
 export async function upload(p: { uri: string; mime?: string; patientId: string; location: string; surgeryDate: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const form = new FormData();
-  form.append('file', { uri: p.uri, name: 'wound.jpg', type: p.mime || 'image/jpeg' } as any);
+  if (Platform.OS === 'web') form.append('file', await (await fetch(p.uri)).blob(), 'wound.jpg');
+  else form.append('file', { uri: p.uri, name: 'wound.jpg', type: p.mime || 'image/jpeg' } as any);
   form.append('patient_id', p.patientId); form.append('scan_date', today);
   form.append('wound_location', p.location); form.append('surgery_date', p.surgeryDate);
   return call<Scan>('/api/scans', { method: 'POST', body: form });
