@@ -37,6 +37,9 @@ function Login({ onDone }: { onDone: () => void }) {
 
 function Home({ go, signOut }: { go: (s: Screen) => void; signOut: () => void }) {
   const [list, setList] = useState<api.Scan[] | null>(null); const [err, setErr] = useState('');
+  const [docs, setDocs] = useState<api.Doctor[]>([]); const [saved, setSaved] = useState('');
+  useEffect(() => { api.careTeam().then(setDocs).catch(() => {}); }, []);
+  const saveDocs = async () => { try { setDocs(await api.setCareTeam(docs.filter(d => d.shared).map(d => d.id))); setSaved('Saved. Your doctor can now see your record.'); } catch (e: any) { setSaved(e.message); } };
   useEffect(() => { api.scans().then(r => setList([...r].sort((a, b) => b.scan_date.localeCompare(a.scan_date)))).catch(e => setErr(e.message)); }, []);
   return (<ScrollView contentContainerStyle={s.pad}>
     <View style={s.row}><Image source={require('./assets/emblem.png')} style={{ width: 44, height: 44 }} /><Text style={s.h1}>My wound journey</Text></View>
@@ -45,6 +48,12 @@ function Home({ go, signOut }: { go: (s: Screen) => void; signOut: () => void })
       list.map(sc => (<Pressable key={sc.id} style={s.card} onPress={() => go({ name: 'result', scan: sc })} accessibilityRole="button">
         <View style={s.row}><Text style={s.h3}>{sc.wound_location}</Text><Badge band={sc.result.risk_band} /></View>
         <Text style={[s.p, { fontFamily: f.mono }]}>{sc.scan_date}</Text></Pressable>))}
+    <View style={s.card}><Text style={s.h3}>My doctor</Text>
+      <Text style={s.p}>Choose who can see your photographs and details.</Text>
+      {docs.length === 0 ? <Text style={s.p}>No doctors have joined yet.</Text> : docs.map(d => (
+        <Pressable key={d.id} accessibilityRole="checkbox" accessibilityState={{ checked: d.shared }} style={[s.chip, d.shared && s.chipOn, { alignItems: 'flex-start' }]}
+          onPress={() => setDocs(docs.map(x => x.id === d.id ? { ...x, shared: !x.shared } : x))}><Text style={[s.chipText, d.shared && { color: '#fff' }]}>{d.shared ? '\u2713 ' : ''}{d.name}</Text></Pressable>))}
+      {docs.length > 0 && <Btn label="Save" onPress={saveDocs} />}{!!saved && <Text style={s.fine}>{saved}</Text>}</View>
     <Btn kind="ghost" label="Sign out" onPress={signOut} />
   </ScrollView>);
 }

@@ -57,6 +57,33 @@ def edit_profile(identifier:str,body:Profile):
         audit(db,'profile_updated',identifier)
     return p
 
+class CareTeam(BaseModel):
+    clinician_ids: list[str] = Field(max_length=50)
+
+def _own_patient():
+    user=actor()
+    if user['role']!='patient': raise HTTPException(403,'Only patients choose who can see their record')
+    return user['patient_id']
+
+@router.get('/care-team')
+def care_team():
+    pid=_own_patient()
+    with store.connection() as db:
+        shared={r[0] for r in db.execute('SELECT user_id FROM assignments WHERE patient_id=?',(pid,))}
+        return [dict(id=r[0],name=r[1],shared=r[0] in shared) for r in db.execute("SELECT id,name FROM users WHERE role='clinician' ORDER BY name")]
+
+@router.put('/care-team')
+def set_care_team(body:CareTeam):
+    """Consent: the patient decides which doctors can see their record. Doctors see changes on their next refresh."""
+    pid=_own_patient()
+    with store.connection() as db:
+        valid={r[0] for r in db.execute("SELECT id FROM users WHERE role='clinician'")}
+        chosen=set(body.clinician_ids)&valid
+        db.execute('DELETE FROM assignments WHERE patient_id=?',(pid,))
+        db.executemany('INSERT INTO assignments VALUES(?,?)',[(c,pid) for c in chosen])
+        audit(db,'care_team_updated',pid)
+    return care_team()
+
 class Wound(BaseModel):
     model_config=ConfigDict(extra='forbid',str_strip_whitespace=True)
     wound_location:str=Field(min_length=1,max_length=100)

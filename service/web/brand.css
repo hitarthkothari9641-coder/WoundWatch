@@ -57,3 +57,4 @@ button,a.button,.tabs button,input,select{min-height:40px}
 .assist-sec ol{padding-left:22px;margin:6px 0 12px}.assist-sec li{margin-bottom:8px}
 .assist-actions{display:flex;gap:8px}
 .assist-qr{display:block;margin:8px auto 12px;max-width:100%;height:auto;border:1px solid #DCE5E8;border-radius:12px}
+.check-row{display:flex;align-items:center;gap:10px;min-height:48px;font-size:17px}.check-row input{width:24px;height:24px}

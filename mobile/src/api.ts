@@ -19,6 +19,7 @@ export type Scan = { id: string; scan_date: string; wound_location: string; pati
   result: { status: string; probability: number | null; risk_band: string; reasons: string[] }; review_status: string };
 export type Guidance = { summary: string; observations: string[]; check: string[]; disclaimer: string };
 export type Patient = { id: string; name: string };
+export type Doctor = { id: string; name: string; shared: boolean };
 
 export async function login(email: string, password: string) {
   const r = await call<{ csrf_token: string; user: { name: string; role: string } }>('/api/auth/login', {
@@ -29,6 +30,8 @@ export async function login(email: string, password: string) {
 export const logout = () => call('/api/auth/logout', { method: 'POST' }).finally(() => { csrf = ''; });
 export const patients = () => call<Patient[]>('/api/patients');
 export const scans = () => call<Scan[]>('/api/scans');
+export const careTeam = () => call<Doctor[]>('/api/care-team');
+export const setCareTeam = (ids: string[]) => call<Doctor[]>('/api/care-team', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinician_ids: ids }) });
 export const guidance = (id: string) => call<Guidance>(`/api/scans/${id}/guidance`);
 
 export async function upload(p: { uri: string; mime?: string; patientId: string; location: string; surgeryDate: string }) {

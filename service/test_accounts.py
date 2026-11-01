@@ -39,6 +39,18 @@ class AccountTests(unittest.TestCase):
         for c in (cls.ca,cls.cb,cls.cd,cls.co):c.close()
         store.ROOT=cls.original;cls.temp.cleanup()
 
+    def test_patient_shares_record_with_chosen_doctor(self):
+        b=self.b['patient_id']
+        self.assertEqual(self.co.get('/api/patients').json(),[])
+        self.assertEqual(self.co.get('/api/care-team').status_code,403)  # doctors cannot use the patient endpoint
+        listed={d['id']:d['shared'] for d in self.cb.get('/api/care-team').json()}
+        self.assertEqual(listed,{self.doc['id']:False,self.other['id']:False})
+        self.assertEqual(self.cb.put('/api/care-team',json={'clinician_ids':[self.other['id'],'not-a-user']}).status_code,200)
+        self.assertEqual([p['id'] for p in self.co.get('/api/patients').json()],[b])  # visible to the chosen doctor at once
+        self.assertEqual([p['id'] for p in self.cd.get('/api/patients').json() if p['id']==b],[])  # not to the other doctor
+        self.assertEqual(self.cb.put('/api/care-team',json={'clinician_ids':[]}).status_code,200)
+        self.assertEqual(self.co.get('/api/patients').json(),[])  # consent withdrawn
+
     def test_role_and_object_isolation(self):
         a=self.a['patient_id'];sid=self.scan['id']
         self.assertEqual([p['id'] for p in self.ca.get('/api/patients').json()],[a])

@@ -16,7 +16,6 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-svg": "15.16.0",
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
@@ -25,8 +24,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "private": true
